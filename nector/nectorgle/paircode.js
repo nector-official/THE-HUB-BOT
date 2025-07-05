@@ -11,7 +11,7 @@ const sessionGen = async (m, sock) => {
 
   if (!text || !/^\+?\d{9,15}$/.test(text)) {
     await sock.sendMessage(m.from, {
-      text: `❌ *Invalid Format!*\n\n✅ Example: *.pair +254712345678*`,
+      text: `❌ *Invalid Format!*\n\n✅ Example: *.pair 254712345678*`,
       contextInfo: {
         forwardingScore: 5,
         isForwarded: true,
@@ -25,7 +25,7 @@ const sessionGen = async (m, sock) => {
   }
 
   try {
-    const response = await axios.get(`https://pair-nector-session.onrender.com/pair?phone=${encodeURIComponent(phoneNumber)}`);
+    const response = await axios.get(`https://pair-nector-session.onrender.com//pair?phone=${encodeURIComponent(phoneNumber)};
     const { code } = response.data;
 
     if (!code) throw new Error("No code returned");
