@@ -7,12 +7,16 @@ const promote = async (m, gss) => {
     const cmd = m.body.startsWith(prefix) ? m.body.slice(prefix.length).split(' ')[0].toLowerCase() : '';
     const text = m.body.slice(prefix.length + cmd.length).trim();
 
-    const validCommands = ['promote', 'adminup', 'makeadmin'];
+    const validCommands = ['promote', 'adminup', 'makeadmin', 'promot'];
     if (!validCommands.includes(cmd)) return;
 
     if (!m.isGroup) {
       return gss.sendMessage(m.from, {
-        text: `┏━━━〔 🚫 *Group Only* 〕━━━┓\n┃\n┃  This command only works in group chats.\n┃\n┗━━━━━━━━━━━━━━━━━━━━┛`,
+        text: `┏━━━〔 🚫 *Group Only* 〕━━━┓
+┃
+┃  This command only works in group chats.
+┃
+┗━━━━━━━━━━━━━━━━━━━━┛`,
         contextInfo: {
           forwardedNewsletterMessageInfo: {
             newsletterJid: '120363395396503029@newsletter',
@@ -28,7 +32,11 @@ const promote = async (m, gss) => {
     const isBotAdmin = participants.find(p => p.id === botNumber)?.admin;
     if (!isBotAdmin) {
       return gss.sendMessage(m.from, {
-        text: `┏━━━〔 ❌ *Permission Error* 〕━━━┓\n┃\n┃  I need to be an *admin* to promote users!\n┃\n┗━━━━━━━━━━━━━━━━━━━━┛`,
+        text: `┏━━━〔 ❌ *Permission Error* 〕━━━┓
+┃
+┃  I need to be an *admin* to promote users!
+┃
+┗━━━━━━━━━━━━━━━━━━━━┛`,
         contextInfo: {
           forwardedNewsletterMessageInfo: {
             newsletterJid: '120363395396503029@newsletter',
@@ -45,28 +53,12 @@ const promote = async (m, gss) => {
 
     if (!isOwner && !isSudo && !isGroupAdmin) {
       return gss.sendMessage(m.from, {
-        text: `┏━━━〔 🔐 *Access Denied* 〕━━━┓\n┃\n┃  Only *admins* or *bot owners* can\n┃  promote others in this group.\n┃\n┗━━━━━━━━━━━━━━━━━━━━┛`,
-        contextInfo: {
-          forwardedNewsletterMessageInfo: {
-            newsletterJid: 'p120363395396503029@newsletter',
-            newsletterName: 'THE-HUB-BOT'
-          }
-        }
-      });
-    }
-
-    if (!m.mentionedJid) m.mentionedJid = [];
-    if (m.quoted?.participant) m.mentionedJid.push(m.quoted.participant);
-
-    const users = m.mentionedJid.length > 0
-      ? m.mentionedJid
-      : text.replace(/[^0-9]/g, '').length > 0
-        ? [text.replace(/[^0-9]/g, '') + '@s.whatsapp.net']
-        : [];
-
-    if (users.length === 0) {
-      return gss.sendMessage(m.from, {
-        text: `┏━━━〔 🧍 *Mention Required* 〕━━━┓\n┃\n┃  Please *mention*, *reply*, or *enter number*\n┃  of the user you want to promote.\n┃\n┃  ✅ Example: *.promote @user*\n┃\n┗━━━━━━━━━━━━━━━━━━━━┛`,
+        text: `┏━━━〔 🔐 *Access Denied* 〕━━━┓
+┃
+┃  Only *admins* or *bot owners* can
+┃  promote others in this group.
+┃
+┗━━━━━━━━━━━━━━━━━━━━┛`,
         contextInfo: {
           forwardedNewsletterMessageInfo: {
             newsletterJid: '120363395396503029@newsletter',
@@ -76,31 +68,47 @@ const promote = async (m, gss) => {
       });
     }
 
-    const validUsers = users.filter(Boolean);
+    // compatibility with other bot logic
+    if (!m.mentionedJid) m.mentionedJid = [];
+    if (m.quoted?.participant) m.mentionedJid.push(m.quoted.participant);
 
-    const usernames = await Promise.all(
-      validUsers.map(async (user) => {
-        try {
-          const contact = await gss.getContact(user);
-          return contact.notify || contact.pushname || user.split('@')[0];
-        } catch {
-          return user.split('@')[0];
-        }
-      })
-    );
+    let target = m.mentionedJid[0]
+      ? m.mentionedJid[0]
+      : m.quoted?.participant
+      ? m.quoted.participant
+      : text.replace(/[^0-9]/g, '').length > 0
+      ? text.replace(/[^0-9]/g, '') + '@s.whatsapp.net'
+      : null;
 
-    await gss.groupParticipantsUpdate(m.from, validUsers, 'promote')
-      .then(() => {
-        const promotedTags = validUsers.map(u => `@${u.split('@')[0]}`).join(', ');
-        gss.sendMessage(m.from, {
-          text:
-`┏━━━〔 ✅ *Promotion Complete* 〕━━━┓
+    if (!target) {
+      return gss.sendMessage(m.from, {
+        text: `┏━━━〔 🧍 *Mention Required* 〕━━━┓
 ┃
-┃  🎉 Promoted: ${promotedTags}
+┃  Please *mention*, *reply*, or *enter number*
+┃  of the user you want to promote.
+┃
+┃  ✅ Example: *.promote @user*
+┃
+┗━━━━━━━━━━━━━━━━━━━━┛`,
+        contextInfo: {
+          forwardedNewsletterMessageInfo: {
+            newsletterJid: '120363395396503029@newsletter',
+            newsletterName: 'THE-HUB-BOT'
+          }
+        }
+      });
+    }
+
+    await gss.groupParticipantsUpdate(m.from, [target], 'promote')
+      .then(() => {
+        gss.sendMessage(m.from, {
+          text: `┏━━━〔 ✅ *Promotion Complete* 〕━━━┓
+┃
+┃  🎉 Promoted: @${target.split('@')[0]}
 ┃  📛 Group: *${groupMetadata.subject}*
 ┃
 ┗━━━━━━━━━━━━━━━━━━━━┛`,
-          mentions: validUsers,
+          mentions: [target],
           contextInfo: {
             forwardedNewsletterMessageInfo: {
               newsletterJid: '120363395396503029@newsletter',
@@ -109,15 +117,17 @@ const promote = async (m, gss) => {
           }
         });
       })
-      .catch(() => gss.sendMessage(m.from, {
-        text: `❌ *Promotion failed.* Make sure the user is in group and not already an admin.`,
-        contextInfo: {
-          forwardedNewsletterMessageInfo: {
-            newsletterJid: '120363395396503029@newsletter',
-            newsletterName: 'THE-HUB-BOT'
+      .catch((err) => {
+        gss.sendMessage(m.from, {
+          text: `❌ *Promotion failed.* ${err.toString()}`,
+          contextInfo: {
+            forwardedNewsletterMessageInfo: {
+              newsletterJid: '120363395396503029@newsletter',
+              newsletterName: 'THE-HUB-BOT'
+            }
           }
-        }
-      }));
+        });
+      });
 
   } catch (error) {
     console.error('Promote Error:', error);
@@ -134,4 +144,3 @@ const promote = async (m, gss) => {
 };
 
 export default promote;
-          
