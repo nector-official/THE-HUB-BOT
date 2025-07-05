@@ -8,7 +8,7 @@ const addPremiumCmd = async (m, sock) => {
 
   if (cmd !== 'addprem') return;
 
-  const allowedAdmins = ['254111385747']; // <-- your master admin list here
+  const allowedAdmins = ['254725474072']; // <-- your master admin list here
   const senderNumber = m.sender.replace(/\D/g, '');
 
   if (!allowedAdmins.includes(senderNumber)) {
@@ -21,8 +21,8 @@ const addPremiumCmd = async (m, sock) => {
         externalAdReply: {
           title: 'Unauthorized Access',
           body: 'This attempt has been logged.',
-          mediaUrl: 'https://github.com/PopkidXmd',
-          sourceUrl: 'https://github.com/PopkidXmd',
+          mediaUrl: 'https://github.com/THE-HUB-BOT',
+          sourceUrl: 'https://github.com/THE-HUB-BOT',
           thumbnailUrl: 'https://telegra.ph/file/4d838ab7ffb49f30c8e18.jpg',
           mediaType: 1,
           showAdAttribution: true,
@@ -65,8 +65,8 @@ const addPremiumCmd = async (m, sock) => {
         externalAdReply: {
           title: 'POPKID XMD PREMIUM MODE',
           body: '🔰 Access granted successfully!',
-          mediaUrl: 'https://github.com/PopkidXmd',
-          sourceUrl: 'https://github.com/PopkidXmd',
+          mediaUrl: 'https://github.com/THE-HUB-BOT',
+          sourceUrl: 'https://github.com/THE-HUB-BOT',
           thumbnailUrl: 'https://telegra.ph/file/4d838ab7ffb49f30c8e18.jpg',
           mediaType: 1,
           showAdAttribution: true,
