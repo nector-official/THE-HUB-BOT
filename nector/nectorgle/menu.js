@@ -9,7 +9,7 @@ const menu = async (m, sock) => {
 
   if (cmd === "menu") {
     const start = new Date().getTime();
-    await m.React('✨');
+    await m.React('🔥');
     const end = new Date().getTime();
     const responseTime = ((end - start) / 1000).toFixed(2);
 
@@ -33,7 +33,7 @@ const menu = async (m, sock) => {
 
     const menuText = `
 ╔═❖ 「 *THE-HUB-BOT* 」❖═╗
-┃ 🤖 *Name:* THE-HUB-BOT
+┃ 🤖 *BOT:* THE-HUB-BOT
 ┃ 🔧 *Version:* 2.0.0
 ┃ 📡 *Mode:* Public
 ┃ ⚡ *Speed:* ${responseTime}s
@@ -42,209 +42,128 @@ const menu = async (m, sock) => {
 ┃ 👑 *Owner:* ⓃⒺCⓉOR🍯
 ╚═════════════════════╝
 
-🌟 *Welcome to your THE-HUB-BOT-powered command hub!* 🌟
+🌟 *Welcome to the command hub!* 🌟
+╭─⟤ ✨ *𝑴𝑨𝑰𝑵 𝑴𝑬𝑵𝑼* ⟢ ──────
+│
+├── 🛠️ *Utility & Tools*
+│   ├ ⚡ .uptime    ⚙️
+│   ├ 🪄 .jid       🔍
+│   ├ 🛰️ .ping      📶
+│   ├ 📝 .request   📨
+│   ├ 🧰 .repo      🔧
+│   ├ 📦 .app       📱
+│   └ 🌐 .host      💻
+│
+├── 🌐 *Internet / Media*
+│   ├ ☀️ .weather   🌦️
+│   ├ 🎶 .play      🎧
+│   ├ 🎵 .play2     🎼
+│   ├ 🎺 .play3     🎷
+│   ├ 📹 .vv        🎥
+│   ├ 📺 .vv2       🎬
+│   ├ 📼 .vv3       📀
+│   ├ 🎞️ .video    📹
+│   ├ 🎯 .tiktokdl  🎵
+│   ├ 🐼 .tiktok    🎭
+│   ├ 🐦 .fbdl      🕊️
+│   ├ 🐘 .fb        📘
+│   ├ 🐳 .facebook  🌊
+│   ├ 🚀 .todown    ⬇️
+│   ├ 🎤 .lyrics    🎙️
+│   ├ 🖼️ .gimage    🖌️
+│   ├ 📸 .img       📷
+│   └ 🌄 .image     🏞️
+│
+├── 🎉 *Fun & Social*
+│   ├ 😈 .insult    👹
+│   ├ 💘 .love      💖
+│   └ 🎲 .dare      🎯
+│
+├── 📖 *Religion & AI*
+│   ├ 📜 .bible     ✝️
+│   └ 🤖 .gpt       🧠
+│
+├── 🔗 *Group Links & Invites*
+│   ├ 🔗 .linkgc    🌐
+│   ├ 🏷️ .grouplink 🔍
+│   ├ 🎫 .invite    ✉️
+│   ├ 🧲 .bring     💌
+│   └ 🚪 .join      🚶
+│
+├── 👥 *Group Management*
+│   ├ 🎉 .welcome   🎊
+│   ├ 🏷️ .tagall    🗣️
+│   ├ 💬 .statusreply 📝
+│   ├ 📝 .groupinfo 📰
+│   ├ 🔓 .group open/close 🔒
+│   ├ 🖼️ .getpp     🖼️
+│   ├ 🚶 .left      🚪
+│   ├ 🏃 .exit      🏠
+│   ├ 🚀 .leave     🏃
+│   ├ ❌ .remove    🚫
+│   ├ 👢 .kick      👢
+│   └ 💣 .kickall   💥
+│
+├── 🛡️ *Admin / Moderation*
+│   ├ 🔥 .makeadmin 👑
+│   ├ 🚀 .adminup   🛡️
+│   ├ 🎯 .promote   🏆
+│   ├ 🪓 .unadmin   🔽
+│   ├ ⬇️ .demote    🚫
+│   ├ 🗑️ .del       🗑️
+│   ├ 🚮 .delete    ✂️
+│   ├ 🌍 .blockcountry 🚷
+│   ├ 🚧 .blockunknown 🔒
+│   ├ 📵 .anticall  🚫
+│   ├ ⚔️ .antispam  🛡️
+│   ├ 🗃️ .antidelete on/off 🗂️
+│   ├ 🛡️ .security  🔐
+│   ├ 🐞 .bug       🪲
+│   └ 📣 .report    📝
+│
+├── ⚙️ *Group Settings*
+│   ├ 🔧 .settings  🛠️
+│   ├ 🔤 .setprefix 🔠
+│   ├ 🏷️ .setname   📝
+│   ├ 📝 .setgroupname 🏷️
+│   ├ 🖊️ .setgroupbio 📰
+│   ├ 📜 .setdesc   📖
+│   └ 📑 .setdescription 📝
+│
+├── 🔄 *Automation*
+│   ├ 🤖 .autotyping 🔄
+│   ├ 👁️ .autostatusview 👀
+│   ├ 👓 .autosview 🕶️
+│   ├ 📺 .autostatus 📝
+│   ├ 🎥 .autorecording 🎬
+│   ├ ❤️ .autoreact ❤️
+│   ├ 📖 .autoread   📚
+│   └ 🔥 .alwaysonline 🌐
+│
+├── 🎭 *Sticker & Media*
+│   ├ 🎨 .sticker   🖌️
+│   ├ 🗂️ .vcf       📇
+│   ├ 🔗 .url       🌎
+│   └ 🖼️ .logo      🎨
+│
+├── 🤖 *Bot Controls*
+│   ├ 🛠️ .update    🔄
+│   ├ 👑 .owner     👤
+│   ├ 🐙 .clonebot  🐚
+│   ├ 🪄 .pair      🧩
+│   ├ 🔍 .getpair   🧩
+│   ├ ⚖️ .mode      ⚙️
+│   ├ 💬 .chatbox   💭
+│   └ 🌟 .addprem   💎
+│
+├── 📜 *Menus & Misc*
+│   ├ 📜 .menu      🗒️
+│   ├ 📋 .menu2     📄
+│   ├ 🪄 .ht        ✨
+│   └ 🕶️ .hidetag   🥷
+│
+╰───────────────────────
 
-╭─❖ 🔰 *MAIN MENU* ❖─╮
-│ 🧭 menu  
-│ ⚙️ bugmenu  
-│ 🚀 speed  
-│ 📡 alive  
-│ 🧑‍💻 sudo  
-│ 💎 addpremium  
-│ 🧪 dev  
-│ 🧾 allvar  
-│ 📍 ping  
-│ 👑 owner  
-╰────────────────╯
-
-╭─❖ 👑 *OWNER COMMANDS* ❖─╮
-│ 📥 join  
-│ 👁️ autoread  
-│ ⚙️ pair  
-│ ❌ leave  
-│ 📝 autostatusview  
-│ ⌨️ autotyping  
-│ 🔒 autoblock  
-│ 🎥 autorecording  
-│ 🌟 autosticker  
-│ 🚫 antisticker  
-│ 🔁 restart  
-│ ❌ block  
-│ ✅ unblock  
-│ 📵 anticall  
-│ 🗑️ antidelete  
-│ ☁️ upload  
-│ ⚙️ vv  
-│ ✏️ setstatusmsg  
-│ 🔐 allcmds  
-│ 📉 calculater  
-│ 🔄 alwaysonline  
-│ 🗑️ delete  
-│ 📊 vv2  
-│ 💬 setprefix  
-│ 🧑‍💼 setownername  
-│ 👤 profile  
-│ 🧾 repo  
-╰─────────────────────╯
-
-╭─❖ 🧠 *AI & CHAT* ❖─╮
-│ 🤖 ai  
-│ 🐞 bug  
-│ 🧠 bot  
-│ ❗ report  
-│ 🌐 gemini  
-│ 💬 chatbot  
-│ 🧪 gpt  
-│ 🤖 lydia  
-│ 🌟 nector-ai  
-╰────────────────╯
-
-╭─❖ 🎨 *CONVERTERS* ❖─╮
-│ 🛡️ security  
-│ 💼 sessioncheck  
-│ 🔒 blockunknown  
-│ 🔁 autoblock  
-│ 🖥️ host  
-│ 🚫 antispam  
-│ ⚔️ antibugs  
-│ 🖋️ attp  
-│ 🖼️ gimage  
-│ 🎵 mp3  
-│ 📸 ss  
-│ ✨ fancy  
-│ 🔗 url  
-│ 🔗 url2  
-│ 📉 shorten  
-│ 🪄 sticker  
-│ 🧷 take  
-╰────────────────╯
-
-╭─❖ 🔍 *SEARCH & TOOLS* ❖─╮
-│ 🌐 google  
-│ 📁 mediafire  
-│ 🕋 quranvideo  
-│ 🕋 quraimage  
-│ 📘 facebook  
-│ 📸 instagram  
-│ 🎶 tiktok  
-│ 📄 lyrics  
-│ 🔍 ytsearch  
-│ 🧩 app  
-│ 💻 bing  
-│ 🕵️ ipstalk  
-│ 🎥 imdb  
-│ 📌 pinterest  
-│ 🐱 githubstalk  
-│ 🖼️ image  
-│ 📱 ringtone  
-│ 🏪 playstore  
-│ 🎧 shazam  
-╰────────────────────╯
-
-╭─❖ 🎮 *FUN & GAMES* ❖─╮
-│ 📸 getpp  
-│ 👤 avatar  
-│ 🎯 wcg  
-│ 😂 joke  
-│ ❌⭕ ttt  
-│ 🤔 yesorno  
-│ 🧩 connect4  
-│ 🥇 rank  
-│ 🧠 quizz  
-│ 🎬 movie  
-│ 😍 flirt  
-│ 📜 givetext  
-│ 🔥 roast  
-│ 🧃 anime  
-│ 👤 profile  
-│ 🧮 ebinary  
-│ 📦 fetch  
-│ 🎨 qc  
-│ 💕 couple  
-│ 📊 poll  
-│ 📈 score  
-│ 🔳 toqr  
-│ 📧 tempmail  
-╰────────────────╯
-
-╭─❖ 👥 *GROUP CONTROL* ❖─╮
-│ ❌ kickall  
-│ 🚫 remove  
-│ 🏷️ tagall  
-│ 👻 hidetag  
-│ 🔁 forward  
-│ 👥 getall  
-│ 🟢 group open  
-│ 🔴 group close  
-│ ➕ add  
-│ 📇 vcf  
-│ 🔚 left  
-│ ⬆️ promote  
-│ ⬇️ demote  
-│ 📝 setdescription  
-│ 🔗 linkgc  
-│ 🚫 antilink  
-│ 🚫 antilink2  
-│ 🛡️ antisticker  
-│ 🚫 antispam  
-│ 🆕 create  
-│ ✏️ setname  
-│ 📊 groupinfo  
-│ 💰 balance  
-╰────────────────────╯
-
-╭─❖ 🔞 *HENTAI ZONE* ❖─╮
-│ 🍑 hneko  
-│ 🧢 trap  
-│ 👧 hwaifu  
-│ 🔞 hentai  
-╰────────────────╯
-
-╭─❖ 🎧 *AUDIO FX* ❖─╮
-│ 💥 earrape  
-│ 🎚️ deep  
-│ 💨 blown  
-│ 🔊 bass  
-│ 🌙 nightcore  
-│ 🍔 fat  
-│ ⚡ fast  
-│ 🤖 robot  
-│ 🐿️ tupai  
-│ 🎵 smooth  
-│ 🐢 slow  
-│ 🔁 reverse  
-╰────────────────╯
-
-╭─❖ 💫 *REACTIONS* ❖─╮
-│ 🪓 bonk  
-│ 👊 bully  
-│ 🚀 yeet  
-│ ✋ slap  
-│ 🍽️ nom  
-│ 👉 poke  
-│ 🐺 awoo  
-│ 👋 wave  
-│ 😊 smile  
-│ 💃 dance  
-│ 😏 smug  
-│ 😳 blush  
-│ 😬 cringe  
-│ 😢 sad  
-│ 😃 happy  
-│ 🍵 shinobu  
-│ 🤗 cuddle  
-│ 🤸 glomp  
-│ ✋ handhold  
-│ 🙌 highfive  
-│ 👢 kick  
-│ 🔪 kill  
-│ 😘 kiss  
-│ 😭 cry  
-│ 😬 bite  
-│ 👅 lick  
-│ 🫴 pat  
-│ 🤗 hug  
-╰────────────────╯
 
 ━━━ ❖ ⚡ *THE-HUB-BOT V2.0* ⚡ ❖ ━━━
 ✨ Innovating Chat, One Command at a Time ✨
