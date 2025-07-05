@@ -32,15 +32,15 @@ const menu = async (m, sock) => {
     }
 
     const menuText = `
-╔═❖ 「 *THE-HUB-BOT* 」❖═╗
-┃ 🤖 *BOT:* THE-HUB-BOT
+┏━✦━ ✨『 *THE-HUB-BOT* 』✨ ━✦━┓
+┃ 🤖 *Bot:*     THE-HUB-BOT
 ┃ 🔧 *Version:* 2.0.0
-┃ 📡 *Mode:* Public
-┃ ⚡ *Speed:* ${responseTime}s
-┃ ⏱️ *Uptime:* ${uptime}
-┃ 🧩 *Prefix:* ${prefix}
-┃ 👑 *Owner:* ⓃⒺCⓉOR🍯
-╚═════════════════════╝
+┃ 📡 *Mode:*    Public
+┃ ⚡ *Speed:*   ${responseTime}s
+┃ ⏱️ *Uptime:*  ${uptime}
+┃ 🧩 *Prefix:*  ${prefix}
+┃ 👑 *Owner:*   ⓃⒺCⓉOR🍯
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
 🌟 *Welcome to the command hub!* 🌟
 ╭─⟤ ✨ *𝑴𝑨𝑰𝑵 𝑴𝑬𝑵𝑼* ⟢ ──────
