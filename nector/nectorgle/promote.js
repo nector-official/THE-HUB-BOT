@@ -29,7 +29,8 @@ const promote = async (m, gss) => {
     const groupMetadata = await gss.groupMetadata(m.from);
     const participants = groupMetadata.participants;
 
-    const isBotAdmin = participants.find(p => p.id === botNumber)?.admin;
+    // fixed: ensure this is boolean
+    const isBotAdmin = !!participants.find(p => p.id === botNumber)?.admin;
     if (!isBotAdmin) {
       return gss.sendMessage(m.from, {
         text: `┏━━━〔 ❌ *Permission Error* 〕━━━┓
@@ -49,7 +50,7 @@ const promote = async (m, gss) => {
     const sender = m.sender;
     const isOwner = sender === config.OWNER_NUMBER + '@s.whatsapp.net';
     const isSudo = config.SUDO?.includes(sender);
-    const isGroupAdmin = participants.find(p => p.id === sender)?.admin;
+    const isGroupAdmin = !!participants.find(p => p.id === sender)?.admin; // ✅ fix here
 
     if (!isOwner && !isSudo && !isGroupAdmin) {
       return gss.sendMessage(m.from, {
@@ -68,7 +69,6 @@ const promote = async (m, gss) => {
       });
     }
 
-    // compatibility with other bot logic
     if (!m.mentionedJid) m.mentionedJid = [];
     if (m.quoted?.participant) m.mentionedJid.push(m.quoted.participant);
 
@@ -144,3 +144,4 @@ const promote = async (m, gss) => {
 };
 
 export default promote;
+        
