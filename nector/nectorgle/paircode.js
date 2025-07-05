@@ -1,89 +1,62 @@
-const { cmd, commands } = require('../../command');
-const axios = require('axios');
+import axios from 'axios';
+import config from '../../config.cjs';
 
-cmd({
-    pattern: "pair",
-    alias: ["getpair", "clonebot"],
-    react: "✅",
-    desc: "Get pairing code for THE-HUB-BOT bot",
-    category: "download",
-    use: ".pair 254725474XXX",
-    filename: __filename
-}, async (conn, mek, m, { from, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply }) => {
-    try {
-        // Extract phone number from command
-        const phoneNumber = q ? q.trim() : senderNumber;
-        
-        // Validate phone number format
-        if (!phoneNumber || !phoneNumber.match(/^\+?\d{10,15}$/)) {
-            return await reply("❌ Please provide a valid phone number with country code\nExample: .pair +254725474XXX");
-        }
+const sessionGen = async (m, sock) => {
+  const prefix = config.PREFIX;
+  const cmd = m.body.startsWith(prefix) ? m.body.slice(prefix.length).split(' ')[0].toLowerCase() : '';
+  const text = m.body.slice(prefix.length + cmd.length).trim();
+  const senderName = m.pushName || 'User';
 
-        // Make API request to get pairing code
-        const response = await axios.get(`https://pair-nector-session.onrender.com/pair?phone=${encodeURIComponent(phoneNumber)}`);
-        
-        if (!response.data || !response.data.code) {
-            return await reply("❌ Failed to retrieve pairing code. Please try again later.");
-        }
+  if (cmd !== 'pair') return;
 
-        const pairingCode = response.data.code;
-        const doneMessage = "> *THE-HUB-BOT PAIRING COMPLETED*";
+  if (!text || !/^\+?\d{9,15}$/.test(text)) {
+    await sock.sendMessage(m.from, {
+      text: `❌ *Invalid Format!*\n\n✅ Example: *.pair +254712345678*`,
+      contextInfo: {
+        forwardingScore: 5,
+        isForwarded: true,
+        forwardedNewsletterMessageInfo: {
+          newsletterName: "THE-HUB-BOT",
+          newsletterJid: "120363395396503029@newsletter",
+        },
+      },
+    }, { quoted: m });
+    return;
+  }
 
-        // Send initial message with formatting
-        await reply(`${doneMessage}\n\n*Your pairing code is:* ${pairingCode}`);
+  try {
+    const response = await axios.get(`https://pair-nector-session.onrender.com/pair?phone=${encodeURIComponent(phoneNumber)}`);
+    const { code } = response.data;
 
-        // Add 2 second delay
-        await new Promise(resolve => setTimeout(resolve, 2000));
+    if (!code) throw new Error("No code returned");
 
-        // Send clean code message
-        await reply(`${pairingCode}`);
+    await sock.sendMessage(m.from, {
+      image: { url: 'https://files.catbox.moe/03qy6k.jpg' },
+      caption: `✅ *Pairing Code Generated!*\n\n👤 Number: ${text}\n🔐 Code: *${code}*\n\nUse this on your bot panel or CLI to connect the number.`,
+      contextInfo: {
+        forwardingScore: 5,
+        isForwarded: true,
+        forwardedNewsletterMessageInfo: {
+          newsletterName: "THE-HUB-BOT",
+          newsletterJid: "120363395396503029@newsletter",
+        },
+      },
+    }, { quoted: m });
+  } catch (err) {
+    console.error(err);
+    await sock.sendMessage(m.from, {
+      text: `❌ *Failed to generate pairing code.*\n\nReason: ${err.response?.data?.error || err.message}`,
+      contextInfo: {
+        forwardingScore: 5,
+        isForwarded: true,
+        forwardedNewsletterMessageInfo: {
+          newsletterName: "THE-HUB-BOT",
+          newsletterJid: "120363395396503029@newsletter",
+        },
+      },
+    }, { quoted: m });
+  }
+};
 
-    } catch (error) {
-        console.error("Pair command error:", error);
-        await reply("❌ An error occurred while getting pairing code. Please try again later.");
-    }
-});
-
-
-cmd({
-    pattern: "pair2",
-    alias: ["getpair2", "clonebot2"],
-    react: "✅",
-    desc: "Get pairing code for THE-HUB-BOT bot",
-    category: "download",
-    use: ".pair 25425474XXX",
-    filename: __filename
-}, async (conn, mek, m, { from, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply }) => {
-    try {
-        // Extract phone number from command
-        const phoneNumber = q ? q.trim() : senderNumber;
-        
-        // Validate phone number format
-        if (!phoneNumber || !phoneNumber.match(/^\+?\d{10,15}$/)) {
-            return await reply("❌ Please provide a valid phone number with country code\nExample: .pair +254725474XXX");
-        }
-
-        // Make API request to get pairing code
-        const response = await axios.get(`https://pair-nector-session.onrender.com//pair?phone=${encodeURIComponent(phoneNumber)}`);
-        
-        if (!response.data || !response.data.code) {
-            return await reply("❌ Failed to retrieve pairing code. Please try again later.");
-        }
-
-        const pairingCode = response.data.code;
-        const doneMessage = "> *THE-HUB-BOT PAIRING COMPLETED*";
-
-        // Send initial message with formatting
-        await reply(`${doneMessage}\n\n*Your pairing code is:* ${pairingCode}`);
-
-        // Add 2 second delay
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        // Send clean code message
-        await reply(`${pairingCode}`);
-
-    } catch (error) {
-        console.error("Pair command error:", error);
-        await reply("❌ An error occurred while getting pairing code. Please try again later.");
-    }
-});
+export default sessionGen;
+      
