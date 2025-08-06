@@ -1,137 +1,55 @@
-import axios from 'axios';
-import pkg, { prepareWAMessageMedia } from '@whiskeysockets/baileys';
-const { generateWAMessageFromContent, proto } = pkg;
+import fetch from 'node-fetch';
 import config from '../../config.cjs';
 
-const Lyrics = async (m, Matrix) => {
-  const prefix = config.PREFIX;
-  const command = m.body.startsWith(prefix)
-    ? m.body.slice(prefix.length).split(' ')[0].toLowerCase()
+const lyricsCommand = async (m, Matrix) => {
+  const command = m.body.startsWith(config.PREFIX)
+    ? m.body.slice(config.PREFIX.length).split(' ')[0].toLowerCase()
     : '';
-  const query = m.body.slice(prefix.length + command.length).trim();
 
-  const validCommands = ['lyrics', 'lyric'];
+  const args = m.body.slice(config.PREFIX.length + command.length).trim();
 
-  if (!validCommands.includes(command)) return;
+  if (command !== 'lyrics') return;
 
-  const newsletterInfo = {
-    forwardingScore: 999,
-    isForwarded: true,
-    forwardedNewsletterMessageInfo: {
-      newsletterJid: "120363395396503029@newsletter",
-      newsletterName: "THE-HUB-BOT"
-    }
-  };
-
-  if (!query) {
-    return m.reply(
-      `Hello *${m.pushName}*,\n\nTo find lyrics, use the format:\n\`\`\`${prefix}lyrics Song Title|Artist Name\`\`\`\n\nExample:\n\`\`\`${prefix}lyrics Imagine|John Lennon\`\`\``,
-      { contextInfo: newsletterInfo }
-    );
+  if (!args) {
+    return m.reply("❓ Please provide a song name to search lyrics for.");
   }
 
   try {
-    await m.React('⏳');
-    await m.reply('Fetching lyrics... please be patient ✨', {
-      contextInfo: newsletterInfo
-    });
+    await Matrix.sendMessage(m.from, { react: { text: "🎶", key: m.key } });
 
-    if (!query.includes('|')) {
-      return m.reply(
-        'Please provide the song title and artist name separated by a `|` symbol.\n\nExample: `Spectre|Alan Walker`',
-        { contextInfo: newsletterInfo }
-      );
+    const apiUrl = `https://api.dreaded.site/api/lyrics?title=${encodeURIComponent(args)}`;
+    const res = await fetch(apiUrl);
+    const data = await res.json();
+
+    if (!data.success || !data.result || !data.result.lyrics) {
+      return m.reply(`❌ Sorry, no lyrics found for "${args}".`);
     }
 
-    const [title, artist] = query.split('|').map(part => part.trim());
+    const { title, artist, link, thumb, lyrics } = data.result;
+    const imageUrl = thumb || "https://files.catbox.moe/v4uikp.jpg";
 
-    if (!title || !artist) {
-      return m.reply(
-        'Oops! Both the song title and artist name are required.\n\nUse the format: `Song Title|Artist Name`',
-        { contextInfo: newsletterInfo }
-      );
+    const imageBuffer = await fetch(imageUrl)
+      .then(res => res.buffer())
+      .catch(err => {
+        console.error('❌ Error fetching image:', err);
+        return null;
+      });
+
+    if (!imageBuffer) {
+      return m.reply("❌ Failed to fetch the song cover image.");
     }
 
-    const apiUrl = `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`;
-    const response = await axios.get(apiUrl);
-    const result = response.data;
+    const caption = `🎼 *Title:* ${title}\n🎤 *Artist:* ${artist}\n\n📝 *Lyrics:*\n\n${lyrics}`;
 
-    if (result && result.lyrics) {
-      const lyrics = result.lyrics.trim();
+    await Matrix.sendMessage(m.from, {
+      image: imageBuffer,
+      caption: caption
+    }, { quoted: m });
 
-      const buttons = [
-        {
-          name: "cta_copy",
-          buttonParamsJson: JSON.stringify({
-            display_text: "📝 Copy Lyrics",
-            id: "copy_code",
-            copy_code: lyrics
-          })
-        },
-        {
-          name: "cta_url",
-          buttonParamsJson: JSON.stringify({
-            display_text: "🌐 Follow Our Channel",
-            url: `https://whatsapp.com/channel/0029Vb3zzYJ9xVJk0Y65c81W`
-          })
-        },
-        {
-          name: "quick_reply",
-          buttonParamsJson: JSON.stringify({
-            display_text: "🏠 Main Menu",
-            id: ".menu"
-          })
-        }
-      ];
-
-      const interactiveMessage = proto.Message.InteractiveMessage.create({
-        header: proto.Message.InteractiveMessage.Header.create({
-          title: `🎶 Lyrics for "${title}" by ${artist} 🎶`,
-          hasMediaAttachment: false
-        }),
-        body: proto.Message.InteractiveMessage.Body.create({
-          text: lyrics || 'No lyrics found for this song. 😔'
-        }),
-        footer: proto.Message.InteractiveMessage.Footer.create({
-          text: `🎵 Powered by 👑ⓃⒺCⓉOR🍯🔥`
-        }),
-        nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({
-          buttons
-        })
-      });
-
-      const msg = generateWAMessageFromContent(m.from, {
-        viewOnceMessage: {
-          message: {
-            messageContextInfo: {
-              deviceListMetadata: {},
-              deviceListMetadataVersion: 2,
-              ...newsletterInfo
-            },
-            interactiveMessage
-          }
-        }
-      }, {});
-
-      await Matrix.relayMessage(msg.key.remoteJid, msg.message, {
-        messageId: msg.key.id
-      });
-
-      await m.React('✅');
-    } else {
-      m.reply(`Sorry, I couldn't find the lyrics for "${title}" by ${artist}. 😔`, {
-        contextInfo: newsletterInfo
-      });
-      await m.React('❌');
-    }
   } catch (error) {
-    console.error('Error fetching lyrics:', error.message);
-    m.reply('An error occurred while trying to fetch the lyrics. Please try again later. 🙏', {
-      contextInfo: newsletterInfo
-    });
-    await m.React('⚠️');
+    console.error('[Lyrics Error]', error.message);
+    m.reply(`❌ An error occurred while fetching lyrics for "${args}".`);
   }
 };
 
-export default Lyrics;
-      
+export default lyricsCommand;
