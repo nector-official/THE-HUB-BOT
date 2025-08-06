@@ -1,3 +1,5 @@
+import axios from 'axios';
+import { fromBuffer } from 'file-type';
 import config from '../../config.cjs';
 
 const effectMap = {
@@ -23,6 +25,37 @@ const effectMap = {
   sand: ["https://en.ephoto360.com/write-names-and-messages-on-the-sand-online-582.html", "👨‍🚒"]
 };
 
+const generateImageEffect = async (url, text, m) => {
+  try {
+    await m.reply("⏳ *Generating image effect...*");
+
+    const response = await axios.get(
+      `https://api-samir.onrender.com/api/ephoto?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`
+    );
+
+    if (!response.data || !response.data.result) {
+      return m.reply("❌ Failed to generate image. Try another text.");
+    }
+
+    const imgUrl = response.data.result;
+    const imgBuffer = (await axios.get(imgUrl, { responseType: 'arraybuffer' })).data;
+    const type = await fromBuffer(imgBuffer);
+
+    if (!type || !type.mime.startsWith('image/')) {
+      return m.reply("❌ Generated file is not a valid image.");
+    }
+
+    await m.sendMessage(m.from, {
+      image: imgBuffer,
+      caption: `✅ *Effect Applied*\n🖋️ Text: ${text}`
+    }, { quoted: m });
+
+  } catch (err) {
+    console.error("[Effect Generator Error]", err.message);
+    await m.reply("❌ Error applying image effect. Try again later.");
+  }
+};
+
 const texteffectsCommand = async (m, Matrix) => {
   const command = m.body.startsWith(config.PREFIX)
     ? m.body.slice(config.PREFIX.length).split(' ')[0].toLowerCase()
@@ -37,19 +70,17 @@ const texteffectsCommand = async (m, Matrix) => {
   try {
     await Matrix.sendMessage(m.from, { react: { text: emoji, key: m.key } });
 
-    if (!args) return m.reply("❓ Please provide text to generate effect.\nExample: *" + config.PREFIX + command + " THE-HUB-BOT*");
-
-    // Assuming `generateImageEffect` is globally defined or imported
-    if (typeof generateImageEffect !== 'function') {
-      return m.reply("❌ Internal error: generateImageEffect() is not defined.");
+    if (!args) {
+      return m.reply(`❓ Please provide text to generate effect.\nExample: *${config.PREFIX}${command} THE-HUB*`);
     }
 
-    await generateImageEffect(url, args, m, config.PREFIX);
+    await generateImageEffect(url, args, m);
 
   } catch (err) {
-    console.error(`[${command.toUpperCase()} Effect Error]`, err.message);
-    m.reply("❌ Failed to generate image effect. Try again later.");
+    console.error(`[${command.toUpperCase()} Error]`, err.message);
+    m.reply("❌ Failed to apply the text effect. Try again later.");
   }
 };
 
 export default texteffectsCommand;
+          
