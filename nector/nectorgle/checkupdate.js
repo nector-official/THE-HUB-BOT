@@ -11,9 +11,8 @@ const checkupdateCommand = async (m, Matrix) => {
   if (command !== 'checkupdate') return;
 
   try {
-    console.log('[CheckUpdate] Started...');
     await Matrix.sendMessage(m.from, { react: { text: "✅", key: m.key } });
-    await m.reply("🔍 Checking for new updates... Please wait...");
+    await m.reply("🔍 Checking for new updates...");
 
     const repoUrl = 'https://api.github.com/repos/nectorofficial/THE-HUB-BOT/commits/main';
 
@@ -21,31 +20,30 @@ const checkupdateCommand = async (m, Matrix) => {
       headers: { 'User-Agent': 'Mozilla/5.0' }
     });
 
-    const latestCommitHash = response.data.sha;
-    console.log('[CheckUpdate] Latest commit:', latestCommitHash);
+    const latestCommitHash = response.data?.sha;
+    if (!latestCommitHash) {
+      return await m.reply("❌ GitHub API did not return a commit hash.");
+    }
 
     const commitFilePath = './current_commit.json';
-
     let currentCommit = null;
 
     if (fs.existsSync(commitFilePath)) {
       const currentData = fs.readFileSync(commitFilePath, 'utf-8');
       currentCommit = JSON.parse(currentData).commitHash;
-      console.log('[CheckUpdate] Current commit from file:', currentCommit);
     }
 
     if (currentCommit !== latestCommitHash) {
       await m.reply("⚡️ *New update available!*\nUse the `!update` command to fetch the latest changes.");
     } else {
-      await m.reply("✅ Your bot is up-to-date! No new updates available.");
+      await m.reply("✅ Your bot is up-to-date.");
     }
 
     fs.writeFileSync(commitFilePath, JSON.stringify({ commitHash: latestCommitHash }, null, 2));
-    console.log('[CheckUpdate] Commit hash saved to file.');
-
   } catch (err) {
+    // This sends the real error to WhatsApp
+    await m.reply(`❌ *Error checking for updates!*\n\n*Reason:* ${err.message}`);
     console.error('[CheckUpdate Error]', err);
-    await m.reply("❌ *Error checking for updates!* Please check logs.");
   }
 };
 
