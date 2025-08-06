@@ -1,48 +1,41 @@
 import config from '../../config.cjs';
 
-const hidetag = async (m, gss) => {
-  const prefix = config.PREFIX;
-  const cmd = m.body.startsWith(prefix) ? m.body.slice(prefix.length).split(' ')[0].toLowerCase() : '';
-  const text = m.body.slice(prefix.length + cmd.length).trim();
+const hidetagCommand = async (m, Matrix, { isGroup, isAdmin, isOwner, groupMetadata }) => {
+  const command = m.body.startsWith(config.PREFIX)
+    ? m.body.slice(config.PREFIX.length).split(' ')[0].toLowerCase()
+    : '';
 
-  if (cmd !== 'hidetag' && cmd !== 'ht') return;
-  if (!m.isGroup) return m.reply('❌ *This command is group only.*');
+  const args = m.body.slice(config.PREFIX.length + command.length).trim();
 
-  const metadata = await gss.groupMetadata(m.from);
-  const participants = metadata.participants.map(p => p.id);
-  const quotedText = m.quoted?.text;
+  if (!["hidetag", "z", "h"].includes(command)) return;
 
-  const finalText = text || quotedText;
+  try {
+    await Matrix.sendMessage(m.from, { react: { text: "✅", key: m.key } });
 
-  if (!finalText) {
-    return gss.sendMessage(m.from, {
-      text: `┏━━〔 📢 *Usage* 〕━━┓
-┃ 
-┃  Please provide a message or reply 
-┃  to a message to send hidden tags.
-┃ 
-┃  ✏ Example: *.hidetag Good morning*
-┃ 
-┗━━━━━━━━━━━━━━┛`,
-      contextInfo: {
-        forwardedNewsletterMessageInfo: {
-          newsletterJid: "120363395396503029@newsletter",
-          newsletterName: "THE-HUB-BOT"
-        }
-      }
-    });
-  }
+    if (!isGroup) {
+      return m.reply("❌ This command only works in groups.");
+    }
 
-  await gss.sendMessage(m.from, {
-    text: `╭──〔 🧨 *Broadcast* 〕───◉\n│\n│ ${finalText}\n│\n╰───────────────◉`,
-    mentions: participants,
-    contextInfo: {
-      forwardedNewsletterMessageInfo: {
-        newsletterJid: "120363395396503029@newsletter",
-        newsletterName: "THE-HUB-BOT"
-      }
-    }
-  });
+    if (!isAdmin && !isOwner) {
+      return m.reply("❌ You must be an admin to use this.");
+    }
+
+    if (!args && !m.quoted) {
+      return m.reply(`💡 Example: ${config.PREFIX}hidetag Hello everyone! (or reply to a message)`);
+    }
+
+    const teks = m.quoted ? m.quoted.text : args;
+    const members = groupMetadata.participants.map(e => e.id);
+
+    await Matrix.sendMessage(m.from, {
+      text: teks,
+      mentions: members
+    }, { quoted: m });
+
+  } catch (err) {
+    console.error('[Hidetag Error]', err.message);
+    m.reply("❌ An error occurred while trying to mention everyone.");
+  }
 };
 
-export default hidetag;
+export default hidetagCommand;
