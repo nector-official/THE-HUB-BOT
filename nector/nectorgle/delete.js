@@ -1,60 +1,67 @@
 import config from '../../config.cjs';
 
-// 💀 ᴅᴇʟᴇᴛᴇ ᴍᴇssᴀɢᴇ ᴄᴏᴍᴍᴀɴᴅ — ᴏᴡɴᴇʀ ᴏɴʟʏ
-const deleteMessage = async (m, gss) => {
+const deleteCommand = async (m, Matrix, msg, react, Replymk, isGroup, isAdmin, isBotAdmin) => {
+  const botNumber = await Matrix.decodeJid(Matrix.user.id);
+  const isOwner = [botNumber, `${config.OWNER_NUMBER}@s.whatsapp.net`].includes(m.sender);
+  const prefix = config.PREFIX;
+
+  const command = m.body.startsWith(prefix)
+    ? m.body.slice(prefix.length).split(' ')[0].toLowerCase()
+    : '';
+
+  if (command !== 'delete' && command !== 'del') return;
+
+  await react(m, "✅️");
+
+  if (!m.quoted) {
+    return Replymk("❗ *Reply to the message you want to delete.*");
+  }
+
   try {
-    const botNumber = await gss.decodeJid(gss.user.id);
-    const isCreator = [botNumber, config.OWNER_NUMBER + '@s.whatsapp.net'].includes(m.sender);
-    const prefix = config.PREFIX;
-    const cmd = m.body.startsWith(prefix) ? m.body.slice(prefix.length).split(' ')[0].toLowerCase() : '';
-    const text = m.body.slice(prefix.length + cmd.length).trim();
+    if (isGroup) {
+      if (!isOwner && !isAdmin) return Replymk(msg.admin);
 
-    const validCommands = ['del', 'delete'];
+      const isBotMsg = m.quoted.sender === botNumber;
 
-    if (!validCommands.includes(cmd)) return;
+      if (isBotMsg) {
+        await Matrix.sendMessage(m.chat, {
+          delete: {
+            remoteJid: m.chat,
+            fromMe: true,
+            id: m.quoted.id,
+            participant: m.quoted.sender
+          }
+        });
+      } else {
+        if (!isBotAdmin) return Replymk(msg.adminbot);
 
-    if (!isCreator) {
-      return m.reply('🚫 *ACCESS DENIED: ONLY OWNER CAN EXECUTE THIS COMMAND!*');
-    }
-
-    if (!m.quoted) {
-      return m.reply('⚠️ *REPLY TO A MESSAGE TO DELETE IT!*');
-    }
-
-    const key = {
-      remoteJid: m.from,
-      id: m.quoted.key.id,
-      participant: m.quoted.key.participant || m.quoted.key.remoteJid,
-    };
-
-    await gss.sendMessage(m.from, { delete: key });
-
-    await gss.sendMessage(m.from, {
-      text: `
-✅ *MESSAGE SUCCESSFULLY ERASED*
-
-📍 *Actioned By:* @${m.sender.split('@')[0]}
-💣 *Command:* ${prefix}${cmd}
-      `.trim(),
-      mentions: [m.sender],
-      contextInfo: {
-        forwardingScore: 999,
-        isForwarded: true,
-        externalAdReply: {
-          title: "THE-HUB-BOT • DELETE MODE",
-          body: "Message removed from chat history",
-          thumbnailUrl: "https://files.catbox.moe/03qy6k.jpg",
-          mediaType: 1,
-          renderLargerThumbnail: true,
-          sourceUrl: "https://the-hub-bot.web.app"
-        }
+        await Matrix.sendMessage(m.chat, {
+          delete: {
+            remoteJid: m.chat,
+            fromMe: false,
+            id: m.quoted.id,
+            participant: m.quoted.sender
+          }
+        });
       }
-    }, { quoted: m });
+    } else {
+      if (!isOwner) return Replymk(msg.owner);
 
-  } catch (error) {
-    console.error('❌ Error deleting message:', error);
-    m.reply('⚠️ *ERROR OCCURRED WHILE DELETING THE MESSAGE.*');
+      await Matrix.sendMessage(m.chat, {
+        delete: {
+          remoteJid: m.chat,
+          fromMe: false,
+          id: m.quoted.id,
+          participant: m.quoted.sender
+        }
+      });
+    }
+  } catch (err) {
+    console.error('[Delete Command Error]', err.message);
+    await Matrix.sendMessage(m.from, {
+      text: '❌ *An error occurred while deleting the message.*'
+    }, { quoted: m });
   }
 };
 
-export default deleteMessage;
+export default deleteCommand;
