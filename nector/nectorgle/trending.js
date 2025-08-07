@@ -1,40 +1,44 @@
-import Parser from 'rss-parser';
+import axios from 'axios';
+import { parseStringPromise } from 'xml2js';
 import config from '../../config.cjs';
 
-const parser = new Parser();
-
 const trendingCommand = async (m, Matrix) => {
-  const command = m.body.startsWith(config.PREFIX)
+  const cmd = m.body.startsWith(config.PREFIX)
     ? m.body.slice(config.PREFIX.length).split(' ')[0].toLowerCase()
     : '';
-
-  if (command !== 'trending') return;
+  if (cmd !== 'trending') return;
 
   await Matrix.sendMessage(m.from, { react: { text: "🌍", key: m.key } });
 
-  const feedUrls = [
-    { title: 'Global News', url: 'https://news.google.com/rss' },
-    { title: 'Kenya News', url: 'https://nation.africa/rss/latest.xml' }
+  const feeds = [
+    {
+      title: 'Kenya News',
+      url: 'https://www.standardmedia.co.ke/rss/headlines.php',
+    },
+    {
+      title: 'Global News',
+      url: 'https://news.google.com/news/rss?hl=en',
+    },
   ];
 
-  let result = '📢 *Trending Today*\n\n';
+  let result = '📢 *Trending News*\n\n';
 
-  await Promise.all(feedUrls.map(async (feedInfo) => {
+  for (const feed of feeds) {
     try {
-      const feed = await parser.parseURL(feedInfo.url);
-      if (!feed.items || feed.items.length === 0) {
-        result += `❌ No ${feedInfo.title} available.\n\n`;
-        return;
-      }
-      result += `🗞 *${feedInfo.title}*\n`;
-      feed.items.slice(0, 5).forEach((item, i) => {
-        result += `*${i+1}.* ${item.title}\n🌐 ${item.link}\n\n`;
+      const { data } = await axios.get(feed.url);
+      const parsed = await parseStringPromise(data);
+
+      const items = parsed.rss.channel[0].item.slice(0, 5); // Top 5 items
+
+      result += `🗞 *${feed.title}*\n`;
+      items.forEach((item, i) => {
+        result += `*${i + 1}.* ${item.title[0]}\n🔗 ${item.link[0]}\n\n`;
       });
     } catch (err) {
-      console.error(`[RSS Error: ${feedInfo.title}]`, err.message);
-      result += `❌ Error loading ${feedInfo.title}.\n\n`;
+      console.error(`[Error loading ${feed.title}]:`, err.message);
+      result += `❌ Could not load ${feed.title}.\n\n`;
     }
-  }));
+  }
 
   await Matrix.sendMessage(m.chat, { text: result.trim() }, { quoted: m });
 };
