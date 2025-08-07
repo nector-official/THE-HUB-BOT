@@ -3,41 +3,25 @@ import config from "../../config.cjs";
 
 let autobioInterval = null;
 
-const getRandomBio = async () => {
-  const apis = [
-    async () => {
-      const res = await axios.get("https://zenquotes.io/api/random");
-      return res.data?.[0]?.q ? `💡 ${res.data[0].q}` : null;
-    },
-    async () => {
-      const res = await axios.get("https://api.adviceslip.com/advice");
-      return res.data?.slip?.advice ? `🧠 ${res.data.slip.advice}` : null;
-    },
-    async () => {
-      const res = await axios.get("https://uselessfacts.jsph.pl/random.json?language=en");
-      return res.data?.text ? `📘 ${res.data.text}` : null;
-    },
-    async () => {
-      const res = await axios.get("https://v2.jokeapi.dev/joke/Any?type=single");
-      return res.data?.joke ? `😂 ${res.data.joke}` : null;
-    }
-  ];
-
-  const randomApi = apis[Math.floor(Math.random() * apis.length)];
+// Fetch motivational quote from API
+const getMotivation = async () => {
   try {
-    const result = await randomApi();
-    return result || "🤖 Auto Bio Active.";
+    const res = await axios.get("https://zenquotes.io/api/random");
+    if (res.data && res.data[0] && res.data[0].q && res.data[0].a) {
+      return `💭 "${res.data[0].q}" - ${res.data[0].a}`;
+    }
   } catch (err) {
-    console.error("[AutoBio API Error]", err.message);
-    return "🤖 Auto Bio Running.";
+    console.error("[AutoBio MotivationAPI Error]", err.message);
   }
+
+  return "🌟 Stay motivated!"; // fallback if API fails
 };
 
 const startAutoBio = async (Matrix) => {
   if (autobioInterval) return;
 
   autobioInterval = setInterval(async () => {
-    const quote = await getRandomBio();
+    const quote = await getMotivation();
     try {
       await Matrix.updateProfileStatus(quote);
       console.log(`[AutoBio] Bio updated to: ${quote}`);
@@ -67,7 +51,7 @@ const autobioCommand = async (m, Matrix) => {
   if (arg === "on") {
     if (autobioInterval) return m.reply("✅ *Auto Bio is already active.*");
     startAutoBio(Matrix);
-    return m.reply("🚀 *Auto Bio started!* Your bio will now change every 10 seconds.");
+    return m.reply("🌟 *Motivational Auto Bio started!* Updates every 10 seconds.");
   }
 
   if (arg === "off") {
