@@ -43,7 +43,7 @@ const startAutoBio = async (Matrix) => {
     } catch (err) {
       console.error("[AutoBio Error]", err.message);
     }
-  }, 9 * 1000); // Every 9 seconds
+  }, 59 * 1000); // Every 59 seconds
 };
 
 const stopAutoBio = () => {
@@ -66,7 +66,7 @@ const autobioCommand = async (m, Matrix) => {
   if (arg === "on") {
     if (autobioInterval) return m.reply("✅ *Auto Bio is already active.*");
     startAutoBio(Matrix);
-    return m.reply("🚀 *Auto Bio started!* Your bio will now change every 9 seconds.");
+    return m.reply("🚀 *Auto Bio started!* Your bio will now change every 59 seconds.");
   }
 
   if (arg === "off") {
