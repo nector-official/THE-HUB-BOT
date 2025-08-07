@@ -3,32 +3,47 @@ import config from "../../config.cjs";
 
 let autobioInterval = null;
 
-// Fetch motivational quote from API
-const getMotivation = async () => {
-  try {
-    const res = await axios.get("https://zenquotes.io/api/random");
-    if (res.data && res.data[0] && res.data[0].q && res.data[0].a) {
-      return `💭 "${res.data[0].q}" - ${res.data[0].a}`;
+const quotes = [
+  "🚀 Keep pushing forward!",
+  "🌟 You're capable of amazing things.",
+  "💡 Progress, not perfection.",
+  "😂 I told my bot a joke, now it won't stop responding!",
+  "🐱 Cats have 32 muscles in each ear... and still ignore you.",
+  "📌 Focus on the step in front of you.",
+  "✨ Powered by THE-HUB-BOT",
+  "🎯 Keep grinding. The bot never sleeps.",
+  "🤖 Auto Bio is watching 👀",
+  "⚡ Be the storm, not the breeze."
+];
+
+const getRandomQuote = async () => {
+  const useApi = Math.random() < 0.5; // 50% chance to use joke API
+
+  if (useApi) {
+    try {
+      const res = await axios.get("https://v2.jokeapi.dev/joke/Any?type=single");
+      if (res.data && res.data.joke) return `😂 ${res.data.joke}`;
+    } catch (err) {
+      console.error("[AutoBio JokeAPI Error]", err.message);
     }
-  } catch (err) {
-    console.error("[AutoBio MotivationAPI Error]", err.message);
   }
 
-  return "🌟 Stay motivated!"; // fallback if API fails
+  const random = quotes[Math.floor(Math.random() * quotes.length)];
+  return random;
 };
 
 const startAutoBio = async (Matrix) => {
   if (autobioInterval) return;
 
   autobioInterval = setInterval(async () => {
-    const quote = await getMotivation();
+    const quote = await getRandomQuote();
     try {
       await Matrix.updateProfileStatus(quote);
       console.log(`[AutoBio] Bio updated to: ${quote}`);
     } catch (err) {
       console.error("[AutoBio Error]", err.message);
     }
-  }, 10 * 1000); // Every 10 seconds
+  }, 9 * 1000); // Every 9 seconds
 };
 
 const stopAutoBio = () => {
@@ -51,7 +66,7 @@ const autobioCommand = async (m, Matrix) => {
   if (arg === "on") {
     if (autobioInterval) return m.reply("✅ *Auto Bio is already active.*");
     startAutoBio(Matrix);
-    return m.reply("🌟 *Motivational Auto Bio started!* Updates every 10 seconds.");
+    return m.reply("🚀 *Auto Bio started!* Your bio will now change every 9 seconds.");
   }
 
   if (arg === "off") {
@@ -62,3 +77,4 @@ const autobioCommand = async (m, Matrix) => {
 };
 
 export default autobioCommand;
+
