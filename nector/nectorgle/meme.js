@@ -1,5 +1,5 @@
-import fetch from 'node-fetch';
 import config from '../../config.cjs';
+import axios from 'axios';
 
 const memeCommand = async (m, Matrix) => {
   const command = m.body.startsWith(config.PREFIX)
@@ -8,23 +8,20 @@ const memeCommand = async (m, Matrix) => {
 
   if (command !== 'meme') return;
 
+  await Matrix.sendMessage(m.from, { react: { text: "🖼️", key: m.key } });
+
   try {
-    await Matrix.sendMessage(m.from, { react: { text: "😂", key: m.key } });
+    const response = await axios.get("https://meme-api.com/gimme");
+    const { title, url, author, postLink } = response.data;
 
-    const res = await fetch('https://meme-api.com/gimme');
-    const data = await res.json();
-
-    if (!data || !data.url)
-      return m.reply("❌ Couldn't fetch meme.");
-
-    await Matrix.sendMessage(m.from, {
-      image: { url: data.url },
-      caption: `🤣 *${data.title}*`
+    await Matrix.sendMessage(m.chat, {
+      image: { url },
+      caption: `🗯 *${title}*\n👤 _by ${author}_\n🔗 ${postLink}`
     }, { quoted: m });
 
   } catch (err) {
-    console.error(err);
-    m.reply("❌ Failed to fetch meme.");
+    console.error('[MEME ERROR]', err.message);
+    m.reply('❌ *Failed to fetch meme. Try again later.*');
   }
 };
 
