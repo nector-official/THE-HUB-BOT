@@ -1,66 +1,40 @@
 import config from '../../config.cjs';
 
-const deleteCommand = async (m, Matrix, msg, react, Replymk, isGroup, isAdmin, isBotAdmin) => {
-  const botNumber = await Matrix.decodeJid(Matrix.user.id);
-  const isOwner = [botNumber, `${config.OWNER_NUMBER}@s.whatsapp.net`].includes(m.sender);
-  const prefix = config.PREFIX;
-
-  const command = m.body.startsWith(prefix)
-    ? m.body.slice(prefix.length).split(' ')[0].toLowerCase()
+const deleteCommand = async (m, { conn }) => {
+  const command = m.body.startsWith(config.PREFIX)
+    ? m.body.slice(config.PREFIX.length).split(' ')[0].toLowerCase()
     : '';
 
-  if (command !== 'delete' && command !== 'del') return;
+  if (command !== 'delete') return;
 
-  await react(m, "✅️");
+  // Check if the message is a reply
+  if (!m.quoted) return m.reply('❗ Reply to a message you want to delete.');
 
-  if (!m.quoted) {
-    return Replymk("❗ *Reply to the message you want to delete.*");
+  const isGroup = m.isGroup;
+  const sender = m.sender;
+  const groupMetadata = isGroup ? await conn.groupMetadata(m.chat) : null;
+  const isAdmin = isGroup
+    ? groupMetadata.participants.find(p => p.id === sender)?.admin !== undefined
+    : true;
+
+  // Only delete if user is admin or it's private chat
+  if (!isAdmin && isGroup) {
+    return m.reply('🚫 You need to be an *admin* to delete messages in this group.');
   }
 
   try {
-    if (isGroup) {
-      if (!isOwner && !isAdmin) return Replymk(msg.admin);
-
-      const isBotMsg = m.quoted.sender === botNumber;
-
-      if (isBotMsg) {
-        await Matrix.sendMessage(m.chat, {
-          delete: {
-            remoteJid: m.chat,
-            fromMe: true,
-            id: m.quoted.id,
-            participant: m.quoted.sender
-          }
-        });
-      } else {
-        if (!isBotAdmin) return Replymk(msg.adminbot);
-
-        await Matrix.sendMessage(m.chat, {
-          delete: {
-            remoteJid: m.chat,
-            fromMe: false,
-            id: m.quoted.id,
-            participant: m.quoted.sender
-          }
-        });
+    await conn.sendMessage(m.chat, {
+      delete: {
+        remoteJid: m.chat,
+        fromMe: false,
+        id: m.quoted.id.id,
+        participant: m.quoted.sender
       }
-    } else {
-      if (!isOwner) return Replymk(msg.owner);
-
-      await Matrix.sendMessage(m.chat, {
-        delete: {
-          remoteJid: m.chat,
-          fromMe: false,
-          id: m.quoted.id,
-          participant: m.quoted.sender
-        }
-      });
-    }
-  } catch (err) {
-    console.error('[Delete Command Error]', err.message);
-    await Matrix.sendMessage(m.from, {
-      text: '❌ *An error occurred while deleting the message.*'
-    }, { quoted: m });
+    });
+    await m.react('🗑️');
+  } catch (error) {
+    console.error('[Delete Error]', error.message);
+    m.reply('⚠️ Failed to delete the message.');
   }
 };
 
