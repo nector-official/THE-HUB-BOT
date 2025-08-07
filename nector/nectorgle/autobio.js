@@ -1,31 +1,61 @@
 import config from '../../config.cjs';
 
+let autobioInterval = null;
+
+const quotes = [
+  "🚀 Keep pushing forward!",
+  "🌟 You're capable of amazing things.",
+  "💡 Progress, not perfection.",
+  "😂 I told my bot a joke, now it won't stop responding!",
+  "🐱 Cats have 32 muscles in each ear... and still ignore you.",
+  "📌 Focus on the step in front of you.",
+  "✨ Powered by THE-HUB-BOT",
+  "🎯 Keep grinding. The bot never sleeps.",
+  "🤖 Auto Bio is watching 👀",
+  "⚡ Be the storm, not the breeze."
+];
+
+const startAutoBio = async (Matrix) => {
+  if (autobioInterval) return;
+
+  autobioInterval = setInterval(async () => {
+    const quote = quotes[Math.floor(Math.random() * quotes.length)];
+    try {
+      await Matrix.updateProfileStatus(quote);
+      console.log(`[AutoBio] Bio updated to: ${quote}`);
+    } catch (err) {
+      console.error('[AutoBio Error]', err.message);
+    }
+  }, 5 * 60 * 1000); // Every 5 minutes
+};
+
+const stopAutoBio = () => {
+  if (autobioInterval) clearInterval(autobioInterval);
+  autobioInterval = null;
+};
+
 const autobioCommand = async (m, Matrix) => {
   const command = m.body.startsWith(config.PREFIX)
     ? m.body.slice(config.PREFIX.length).split(' ')[0].toLowerCase()
     : '';
+  const arg = m.body.slice(config.PREFIX.length + command.length).trim().toLowerCase();
 
   if (command !== 'autobio') return;
 
-  await Matrix.sendMessage(m.from, { react: { text: "📣", key: m.key } });
+  if (!['on', 'off'].includes(arg)) {
+    return m.reply("🔁 *Usage:*\n\n`autobio on` - Start auto bio\n`autobio off` - Stop auto bio");
+  }
 
-  const quotes = [
-    "⚡ Powered by THE-HUB-BOT",
-    "🕐 Time now: " + new Date().toLocaleTimeString(),
-    "🚀 Active since: " + new Date().toLocaleDateString(),
-    "📡 Online — serving users...",
-    "✨ Stay connected. Stay secured."
-  ];
+  if (arg === 'on') {
+    if (autobioInterval) return m.reply("✅ *Auto Bio is already active.*");
+    startAutoBio(Matrix);
+    return m.reply("🚀 *Auto Bio started!* Your bio will now change every 5 minutes.");
+  }
 
-  // Pick a random quote
-  const bio = quotes[Math.floor(Math.random() * quotes.length)];
-
-  try {
-    await Matrix.updateProfileStatus(bio);
-    m.reply(`✅ *Bio updated to:*\n\n${bio}`);
-  } catch (err) {
-    console.error('[AutoBio Error]', err.message);
-    m.reply("❌ *Failed to update bio. Make sure your session is active.*");
+  if (arg === 'off') {
+    if (!autobioInterval) return m.reply("⚠️ *Auto Bio is not running.*");
+    stopAutoBio();
+    return m.reply("🛑 *Auto Bio stopped.*");
   }
 };
 
