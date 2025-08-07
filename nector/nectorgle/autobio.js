@@ -3,49 +3,41 @@ import config from "../../config.cjs";
 
 let autobioInterval = null;
 
-// List of your preferred APIs
-const apiList = [
-  "https://zenquotes.io/api/random",
-  "https://api.adviceslip.com/advice",
-  "https://uselessfacts.jsph.pl/random.json?language=en",
-  "https://v2.jokeapi.dev/joke/Any?type=single"
-];
+const getRandomBio = async () => {
+  const apis = [
+    async () => {
+      const res = await axios.get("https://zenquotes.io/api/random");
+      return res.data?.[0]?.q ? `💡 ${res.data[0].q}` : null;
+    },
+    async () => {
+      const res = await axios.get("https://api.adviceslip.com/advice");
+      return res.data?.slip?.advice ? `🧠 ${res.data.slip.advice}` : null;
+    },
+    async () => {
+      const res = await axios.get("https://uselessfacts.jsph.pl/random.json?language=en");
+      return res.data?.text ? `📘 ${res.data.text}` : null;
+    },
+    async () => {
+      const res = await axios.get("https://v2.jokeapi.dev/joke/Any?type=single");
+      return res.data?.joke ? `😂 ${res.data.joke}` : null;
+    }
+  ];
 
-// Get a random quote/fact/joke/advice from the APIs
-const getRandomQuote = async () => {
-  const api = apiList[Math.floor(Math.random() * apiList.length)];
-
+  const randomApi = apis[Math.floor(Math.random() * apis.length)];
   try {
-    const res = await axios.get(api);
-
-    if (api.includes("zenquotes")) {
-      return `🌟 ${res.data[0]?.q} — ${res.data[0]?.a}`;
-    }
-
-    if (api.includes("adviceslip")) {
-      return `💡 ${res.data.slip.advice}`;
-    }
-
-    if (api.includes("uselessfacts")) {
-      return `📘 ${res.data.text}`;
-    }
-
-    if (api.includes("jokeapi")) {
-      return `😂 ${res.data.joke}`;
-    }
-
+    const result = await randomApi();
+    return result || "🤖 Auto Bio Active.";
   } catch (err) {
     console.error("[AutoBio API Error]", err.message);
-    return "⚡ THE-HUB-BOT is live!";
+    return "🤖 Auto Bio Running.";
   }
 };
 
-// Start the autobio interval
 const startAutoBio = async (Matrix) => {
   if (autobioInterval) return;
 
   autobioInterval = setInterval(async () => {
-    const quote = await getRandomQuote();
+    const quote = await getRandomBio();
     try {
       await Matrix.updateProfileStatus(quote);
       console.log(`[AutoBio] Bio updated to: ${quote}`);
@@ -55,13 +47,11 @@ const startAutoBio = async (Matrix) => {
   }, 10 * 1000); // Every 10 seconds
 };
 
-// Stop the autobio interval
 const stopAutoBio = () => {
   if (autobioInterval) clearInterval(autobioInterval);
   autobioInterval = null;
 };
 
-// Handle the `autobio` command
 const autobioCommand = async (m, Matrix) => {
   const command = m.body.startsWith(config.PREFIX)
     ? m.body.slice(config.PREFIX.length).split(" ")[0].toLowerCase()
