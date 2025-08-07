@@ -1,17 +1,7 @@
+import Parser from 'rss-parser';
 import config from '../../config.cjs';
-import axios from 'axios';
-import xml2js from 'xml2js';
 
-const parseRSS = async (url) => {
-  try {
-    const res = await axios.get(url);
-    const data = await xml2js.parseStringPromise(res.data);
-    return data.rss?.channel?.[0]?.item?.slice(0, 5) || [];
-  } catch (err) {
-    console.error("[RSS Parse Error]", err.message);
-    return [];
-  }
-};
+const parser = new Parser();
 
 const trendingCommand = async (m, Matrix) => {
   const command = m.body.startsWith(config.PREFIX)
@@ -22,23 +12,31 @@ const trendingCommand = async (m, Matrix) => {
 
   await Matrix.sendMessage(m.from, { react: { text: "🌍", key: m.key } });
 
-  const [globalItems, kenyaItems] = await Promise.all([
-    parseRSS('https://news.google.com/news/rss'),
-    parseRSS('https://nation.africa/rss/latest.xml')
-  ]);
+  const feedUrls = [
+    { title: 'Global News', url: 'https://news.google.com/rss' },
+    { title: 'Kenya News', url: 'https://nation.africa/rss/latest.xml' }
+  ];
 
-  const formatItems = (title, items) => {
-    if (items.length === 0) return `❌ No ${title} found.\n`;
-    return `🗞 *${title}*\n` + items.map((item, i) => {
-      const ti = item.title?.[0] || 'N/A';
-      const link = item.link?.[0] || 'N/A';
-      return `*${i+1}.* ${ti}\n🌐 ${link}`;
-    }).join("\n\n");
-  };
+  let result = '📢 *Trending Today*\n\n';
 
-  const result = `📢 *Trending Today*\n\n${formatItems("Global News", globalItems)}\n\n${formatItems("Kenya News", kenyaItems)}`;
+  await Promise.all(feedUrls.map(async (feedInfo) => {
+    try {
+      const feed = await parser.parseURL(feedInfo.url);
+      if (!feed.items || feed.items.length === 0) {
+        result += `❌ No ${feedInfo.title} available.\n\n`;
+        return;
+      }
+      result += `🗞 *${feedInfo.title}*\n`;
+      feed.items.slice(0, 5).forEach((item, i) => {
+        result += `*${i+1}.* ${item.title}\n🌐 ${item.link}\n\n`;
+      });
+    } catch (err) {
+      console.error(`[RSS Error: ${feedInfo.title}]`, err.message);
+      result += `❌ Error loading ${feedInfo.title}.\n\n`;
+    }
+  }));
 
-  await Matrix.sendMessage(m.chat, { text: result }, { quoted: m });
+  await Matrix.sendMessage(m.chat, { text: result.trim() }, { quoted: m });
 };
 
 export default trendingCommand;
