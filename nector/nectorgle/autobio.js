@@ -7,8 +7,6 @@ const quotes = [
   "🚀 Keep pushing forward!",
   "🌟 You're capable of amazing things.",
   "💡 Progress, not perfection.",
-  "😂 I told my bot a joke, now it won't stop responding!",
-  "🐱 Cats have 32 muscles in each ear... and still ignore you.",
   "📌 Focus on the step in front of you.",
   "✨ Powered by THE-HUB-BOT",
   "🎯 Keep grinding. The bot never sleeps.",
@@ -17,14 +15,16 @@ const quotes = [
 ];
 
 const getRandomQuote = async () => {
-  const useApi = Math.random() < 0.8; // 80% chance to use joke API
+  const useApi = Math.random() < 0.8; // 80% chance to use motivational API
 
   if (useApi) {
     try {
-      const res = await axios.get("https://v2.jokeapi.dev/joke/Any?type=single");
-      if (res.data && res.data.joke) return `😂 ${res.data.joke}`;
+      const res = await axios.get("https://zenquotes.io/api/random");
+      if (res.data && res.data[0] && res.data[0].q && res.data[0].a) {
+        return `💬 ${res.data[0].q} — ${res.data[0].a}`;
+      }
     } catch (err) {
-      console.error("[AutoBio JokeAPI Error]", err.message);
+      console.error("[AutoBio ZenQuotes API Error]", err.message);
     }
   }
 
@@ -77,4 +77,3 @@ const autobioCommand = async (m, Matrix) => {
 };
 
 export default autobioCommand;
-
