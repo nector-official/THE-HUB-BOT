@@ -7,7 +7,7 @@ const chatgptCommand = async (m, Matrix) => {
     : '';
   const args = m.body.slice(config.PREFIX.length + command.length).trim();
 
-  if (!["ai", "chatgpt"].includes(command)) return;
+  if (!["ai", "gpt", "chatgpt"].includes(command)) return;
 
   await Matrix.sendMessage(m.from, { react: { text: "🤖", key: m.key } });
 
