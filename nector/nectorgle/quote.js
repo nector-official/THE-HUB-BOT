@@ -1,5 +1,5 @@
-import fetch from 'node-fetch';
 import config from '../../config.cjs';
+import axios from 'axios';
 
 const quoteCommand = async (m, Matrix) => {
   const command = m.body.startsWith(config.PREFIX)
@@ -8,21 +8,17 @@ const quoteCommand = async (m, Matrix) => {
 
   if (command !== 'quote') return;
 
+  await Matrix.sendMessage(m.from, { react: { text: "📜", key: m.key } });
+
   try {
-    await Matrix.sendMessage(m.from, { react: { text: "😁", key: m.key } });
+    const response = await axios.get('https://api.quotable.io/random');
+    const { content, author } = response.data;
 
-    const res = await fetch('https://api.quotable.io/random');
-    const data = await res.json();
-
-    if (!data || !data.content)
-      return m.reply("❌ Couldn't fetch a quote.");
-
-    m.reply(`📜 *"${data.content}"*\n\n— ${data.author}`);
+    await m.reply(`📜 *${content}*\n— _${author}_`);
   } catch (err) {
-    console.error(err);
-    m.reply("❌ Failed to fetch quote.");
+    console.error('[QUOTE ERROR]', err.message);
+    m.reply('❌ *Could not fetch a quote right now.*');
   }
 };
 
 export default quoteCommand;
-      
