@@ -17,7 +17,7 @@ const quotes = [
 ];
 
 const getRandomQuote = async () => {
-  const useApi = Math.random() < 0.5; // 50% chance to use joke API
+  const useApi = Math.random() < 0.8; // 80% chance to use joke API
 
   if (useApi) {
     try {
@@ -43,7 +43,7 @@ const startAutoBio = async (Matrix) => {
     } catch (err) {
       console.error("[AutoBio Error]", err.message);
     }
-  }, 59 * 1000); // Every 59 seconds
+  }, 19 * 1000); // Every 19 seconds
 };
 
 const stopAutoBio = () => {
@@ -66,7 +66,7 @@ const autobioCommand = async (m, Matrix) => {
   if (arg === "on") {
     if (autobioInterval) return m.reply("✅ *Auto Bio is already active.*");
     startAutoBio(Matrix);
-    return m.reply("🚀 *Auto Bio started!* Your bio will now change every 59 seconds.");
+    return m.reply("🚀 *Auto Bio started!* Your bio will now change every 19 seconds.");
   }
 
   if (arg === "off") {
