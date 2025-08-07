@@ -1,5 +1,5 @@
-import fetch from 'node-fetch';
 import config from '../../config.cjs';
+import axios from 'axios';
 
 const factCommand = async (m, Matrix) => {
   const command = m.body.startsWith(config.PREFIX)
@@ -8,21 +8,19 @@ const factCommand = async (m, Matrix) => {
 
   if (command !== 'fact') return;
 
+  await Matrix.sendMessage(m.from, { react: { text: "📘", key: m.key } });
+
   try {
-    await Matrix.sendMessage(m.from, { react: { text: "😑", key: m.key } });
+    const res = await axios.get("https://uselessfacts.jsph.pl/random.json?language=en");
+    const fact = res.data?.text;
 
-    const res = await fetch('https://uselessfacts.jsph.pl/random.json?language=en');
-    const data = await res.json();
+    if (!fact) return m.reply('😓 *Could not fetch a fact. Try again later.*');
 
-    if (!data.text)
-      return m.reply("❌ Couldn't fetch a fact.");
-
-    m.reply(`💡 *Random Fact:*\n\n${data.text}`);
-  } catch (err) {
-    console.error(err);
-    m.reply("❌ Failed to fetch fact.");
+    m.reply(`🧠 *Did you know?*\n\n${fact}`);
+  } catch (error) {
+    console.error('[FACT ERROR]', error.message);
+    m.reply('⚠️ *Error fetching fact. Please try again later.*');
   }
 };
 
 export default factCommand;
-                                               
