@@ -20,7 +20,7 @@ const getRandomQuote = async () => {
   if (useApi) {
     try {
       const res = await axios.get("https://zenquotes.io/api/random");
-      if (res.data && res.data[0] && res.data[0].q && res.data[0].a) {
+      if (res.data && res.data[0]?.q && res.data[0]?.a) {
         return `💬 ${res.data[0].q} — ${res.data[0].a}`;
       }
     } catch (err) {
@@ -28,13 +28,13 @@ const getRandomQuote = async () => {
     }
   }
 
-  const random = quotes[Math.floor(Math.random() * quotes.length)];
-  return random;
+  return quotes[Math.floor(Math.random() * quotes.length)];
 };
 
-const startAutoBio = async (Matrix) => {
+const startAutoBio = (Matrix) => {
   if (autobioInterval) return;
 
+  console.log("[AutoBio] Auto Bio started automatically.");
   autobioInterval = setInterval(async () => {
     const quote = await getRandomQuote();
     try {
@@ -43,7 +43,7 @@ const startAutoBio = async (Matrix) => {
     } catch (err) {
       console.error("[AutoBio Error]", err.message);
     }
-  }, 19 * 1000); // Every 19 seconds
+  }, 19 * 1000);
 };
 
 const stopAutoBio = () => {
@@ -66,13 +66,20 @@ const autobioCommand = async (m, Matrix) => {
   if (arg === "on") {
     if (autobioInterval) return m.reply("✅ *Auto Bio is already active.*");
     startAutoBio(Matrix);
-    return m.reply("🚀 *Auto Bio started!* Your bio will now change every 19 seconds.");
+    return m.reply("🚀 *Auto Bio started!* Your bio will now change every 20 seconds.");
   }
 
   if (arg === "off") {
     if (!autobioInterval) return m.reply("⚠️ *Auto Bio is not running.*");
     stopAutoBio();
     return m.reply("🛑 *Auto Bio stopped.*");
+  }
+};
+
+// ✅ Auto-start autobio when bot connects
+export const autoStartAutoBio = (Matrix) => {
+  if (config.AUTO_BIO) {
+    startAutoBio(Matrix);
   }
 };
 
