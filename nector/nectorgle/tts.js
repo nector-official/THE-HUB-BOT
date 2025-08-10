@@ -1,31 +1,50 @@
 import config from '../../config.cjs';
 import axios from 'axios';
 import fs from 'fs';
+import path from 'path';
 
 const ttsCommand = async (m, Matrix) => {
-  const command = m.body.startsWith(config.PREFIX)
-    ? m.body.slice(config.PREFIX.length).split(' ')[0].toLowerCase()
+  const prefix = config.PREFIX;
+  const command = m.body.startsWith(prefix)
+    ? m.body.slice(prefix.length).split(' ')[0].toLowerCase()
     : '';
-  const args = m.body.slice(config.PREFIX.length + command.length).trim();
 
-  if (command !== 'tts') return;
+  // Command aliases
+  const aliases = ['tts', 'speak', 'say'];
 
-  await Matrix.sendMessage(m.from, { react: { text: "🗣", key: m.key } });
+  if (!aliases.includes(command)) return;
 
-  if (!args) return m.reply('❗ *Enter the text to speak.*');
+  const text = m.body.slice(prefix.length + command.length).trim();
+  if (!text) {
+    return m.reply("🗣️ Please provide some text to convert to speech.\nExample: `.tts Hello world`");
+  }
 
   try {
-    const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(args)}&tl=en&client=tw-ob`;
+    // Temporary output file
+    const outputPath = path.join('./', `tts_${Date.now()}.mp3`);
 
-    await Matrix.sendMessage(m.chat, {
-      audio: { url },
+    // Google Translate TTS (no API key required)
+    const lang = 'en'; // Change this to your preferred language code
+    const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(text)}&tl=${lang}`;
+
+    const response = await axios({
+      url,
+      method: 'GET',
+      responseType: 'arraybuffer'
+    });
+
+    fs.writeFileSync(outputPath, response.data);
+
+    await Matrix.sendMessage(m.from, {
+      audio: { url: outputPath },
       mimetype: 'audio/mp4',
-      ptt: true
+      ptt: false
     }, { quoted: m });
 
+    fs.unlinkSync(outputPath); // Delete after sending
   } catch (err) {
-    console.error('[TTS Error]', err.message);
-    m.reply('❌ *Could not generate speech audio.*');
+    console.error('[TTS ERROR]', err.message);
+    m.reply('❌ *Could not process text-to-speech right now.*');
   }
 };
 
