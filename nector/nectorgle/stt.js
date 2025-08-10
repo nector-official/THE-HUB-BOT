@@ -13,24 +13,25 @@ const sttCommand = async (m, Matrix) => {
   const aliases = ['stt', 'speech', 'listen'];
   if (!aliases.includes(command)) return;
 
-  // Determine if audio is from reply or from current message
-  const audioMsg = 
-    (m.quoted && (m.quoted.audioMessage || m.quoted.videoMessage)) ||
-    (m.audioMessage || m.videoMessage);
+  // Check if audio exists in quoted message or current message
+  const quotedMsg = m.quoted && m.quoted.message;
+  const hasAudio = 
+    (quotedMsg && quotedMsg.audioMessage) ||
+    (m.message && m.message.audioMessage);
 
-  if (!audioMsg) {
+  if (!hasAudio) {
     return m.reply("🎙️ Please send or reply to a voice note/audio message with `.stt` to transcribe it.");
   }
 
   await Matrix.sendMessage(m.from, { react: { text: "⏳", key: m.key } });
 
   try {
-    // Download the audio file
+    // Download audio buffer (either from reply or from current message)
     const audioBuffer = await Matrix.downloadMediaMessage(m.quoted || m);
     const tempPath = path.join('./', `voice_${Date.now()}.ogg`);
     fs.writeFileSync(tempPath, audioBuffer);
 
-    // Send audio to free Whisper API
+    // Send to free Whisper API
     const formData = new FormData();
     formData.append('file', fs.createReadStream(tempPath));
     formData.append('model', 'whisper-1');
@@ -39,8 +40,7 @@ const sttCommand = async (m, Matrix) => {
       headers: formData.getHeaders(),
     });
 
-    fs.unlinkSync(tempPath); // delete after use
-
+    fs.unlinkSync(tempPath); // cleanup
     const transcription = res.data.text || "❌ Could not transcribe.";
     await m.reply(`📝 *Transcription:*\n${transcription}`);
   } catch (err) {
