@@ -9,14 +9,19 @@ const riddleCommand = async (m, Matrix) => {
     ? m.body.slice(prefix.length).split(' ')[0].toLowerCase()
     : '';
 
-  if (command === 'riddle') {
+  // Aliases for the riddle command
+  const aliases = ['riddle', 'quiz', 'puzzle', 'brain'];
+
+  // Check if the command is one of the aliases
+  if (aliases.includes(command)) {
     await Matrix.sendMessage(m.from, { react: { text: "❓", key: m.key } });
 
     try {
+      // Fetch a random riddle
       const res = await axios.get('https://riddles-api.vercel.app/random');
       const { riddle, answer } = res.data;
 
-      // Store the answer for the user
+      // Store the correct answer for the user
       activeRiddles[m.sender] = answer.toLowerCase().trim();
 
       await m.reply(`🧩 *Riddle Time!*\n\n${riddle}\n\n💬 Reply with your answer.`);
@@ -27,7 +32,7 @@ const riddleCommand = async (m, Matrix) => {
     return;
   }
 
-  // If the user is answering
+  // If user is answering an active riddle
   if (activeRiddles[m.sender]) {
     const userAnswer = m.body.trim().toLowerCase();
     const correct = activeRiddles[m.sender];
@@ -38,7 +43,8 @@ const riddleCommand = async (m, Matrix) => {
       await m.reply(`❌ Oops! The correct answer was *${correct}*.`);
     }
 
-    delete activeRiddles[m.sender]; // Clear the stored riddle
+    // Remove stored riddle after answering
+    delete activeRiddles[m.sender];
   }
 };
 
