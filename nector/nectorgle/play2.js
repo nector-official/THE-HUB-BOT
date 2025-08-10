@@ -17,7 +17,10 @@ const playCommand = async (m, Matrix) => {
 
   const args = m.body.slice(prefix.length + command.length).trim();
 
-  if (command !== 'play') return;
+  // ✅ Add aliases here
+  const playAliases = ['play', 'hit', 'music', 'song', 'beats'];
+
+  if (!playAliases.includes(command)) return;
 
   if (!args && !m.quoted) {
     return m.reply("❓ What song or URL do you want to download?\nYou can also reply to a message with a URL.");
@@ -99,4 +102,3 @@ const playCommand = async (m, Matrix) => {
 };
 
 export default playCommand;
-      
