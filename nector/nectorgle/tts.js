@@ -1,7 +1,7 @@
 import config from '../../config.cjs';
-import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
+import axios from 'axios';
 
 const ttsCommand = async (m, Matrix) => {
   const prefix = config.PREFIX;
@@ -9,42 +9,37 @@ const ttsCommand = async (m, Matrix) => {
     ? m.body.slice(prefix.length).split(' ')[0].toLowerCase()
     : '';
 
-  // Command aliases
-  const aliases = ['tts', 'speak', 'say'];
-
+  const aliases = ['tts', 'say', 'speak'];
   if (!aliases.includes(command)) return;
 
-  const text = m.body.slice(prefix.length + command.length).trim();
+  // Get text from arguments or quoted message
+  const args = m.body.slice(prefix.length + command.length).trim();
+  const text = args || (m.quoted && m.quoted.text);
+
   if (!text) {
-    return m.reply("🗣️ Please provide some text to convert to speech.\nExample: `.tts Hello world`");
+    return m.reply("🗣️ Please provide text or reply to a message to convert it to speech.");
   }
 
+  await Matrix.sendMessage(m.from, { react: { text: "🎤", key: m.key } });
+
   try {
-    // Temporary output file
-    const outputPath = path.join('./', `tts_${Date.now()}.mp3`);
+    // Google Translate TTS free endpoint
+    const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(text)}&tl=en`;
 
-    // Google Translate TTS (no API key required)
-    const lang = 'en'; // Change this to your preferred language code
-    const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(text)}&tl=${lang}`;
-
-    const response = await axios({
-      url,
-      method: 'GET',
-      responseType: 'arraybuffer'
-    });
-
-    fs.writeFileSync(outputPath, response.data);
+    const audioPath = path.join('./', `tts_${Date.now()}.mp3`);
+    const response = await axios.get(ttsUrl, { responseType: 'arraybuffer' });
+    fs.writeFileSync(audioPath, response.data);
 
     await Matrix.sendMessage(m.from, {
-      audio: { url: outputPath },
-      mimetype: 'audio/mp4',
-      ptt: false
+      audio: { url: audioPath },
+      mimetype: 'audio/mpeg',
+      ptt: true // sends as push-to-talk (voice note)
     }, { quoted: m });
 
-    fs.unlinkSync(outputPath); // Delete after sending
+    fs.unlinkSync(audioPath);
   } catch (err) {
     console.error('[TTS ERROR]', err.message);
-    m.reply('❌ *Could not process text-to-speech right now.*');
+    await m.reply('❌ *Could not convert text to speech right now.*');
   }
 };
 
