@@ -17,7 +17,7 @@ const playCommand = async (m, Matrix) => {
 
   const args = m.body.slice(prefix.length + command.length).trim();
 
-  if (command !== 'play', 'music', 'song', 'hit') return;
+  if (command !== 'play') return;
 
   if (!args && !m.quoted) {
     return m.reply("❓ What song or URL do you want to download?\nYou can also reply to a message with a URL.");
