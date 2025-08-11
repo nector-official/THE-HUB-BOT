@@ -3,6 +3,14 @@ import axios from 'axios';
 
 let activeRiddles = {};
 
+// Helper function to normalize answers (remove punctuation, lowercase, trim)
+function normalize(str) {
+  return str
+    .toLowerCase()
+    .replace(/[^\w\s]/g, '') // remove punctuation
+    .trim();
+}
+
 const riddleCommand = async (m, Matrix) => {
   const prefix = config.PREFIX;
   const command = m.body.startsWith(prefix)
@@ -12,7 +20,7 @@ const riddleCommand = async (m, Matrix) => {
   // Aliases for the riddle command
   const aliases = ['riddle', 'quiz', 'puzzle', 'brain'];
 
-  // Check if the command is one of the aliases
+  // If user requests a new riddle
   if (aliases.includes(command)) {
     await Matrix.sendMessage(m.from, { react: { text: "❓", key: m.key } });
 
@@ -21,8 +29,11 @@ const riddleCommand = async (m, Matrix) => {
       const res = await axios.get('https://riddles-api.vercel.app/random');
       const { riddle, answer } = res.data;
 
-      // Store the correct answer for the user
-      activeRiddles[m.sender] = answer.toLowerCase().trim();
+      // Store the correct answer for the user (original + normalized)
+      activeRiddles[m.sender] = {
+        original: answer.trim(),
+        normalized: normalize(answer)
+      };
 
       await m.reply(`🧩 *Riddle Time!*\n\n${riddle}\n\n💬 Reply with your answer.`);
     } catch (err) {
@@ -34,16 +45,19 @@ const riddleCommand = async (m, Matrix) => {
 
   // If user is answering an active riddle
   if (activeRiddles[m.sender]) {
-    const userAnswer = m.body.trim().toLowerCase();
-    const correct = activeRiddles[m.sender];
+    const userAnswer = normalize(m.body);
+    const { original, normalized } = activeRiddles[m.sender];
 
-    if (userAnswer === correct) {
-      await m.reply(`🎉 Correct! The answer is indeed *${correct}* 👏`);
+    // Keyword overlap check
+    const correctWords = normalized.split(/\s+/).filter(w => w.length > 2); // ignore very short words
+    const matchingWords = correctWords.filter(word => userAnswer.includes(word));
+
+    if (userAnswer === normalized || matchingWords.length >= 2) {
+      await m.reply(`🎉 Correct! The answer is indeed *${original}* 👏`);
     } else {
-      await m.reply(`❌ Oops! The correct answer was *${correct}*.`);
+      await m.reply(`❌ Oops! The correct answer was *${original}*.`);
     }
 
-    // Remove stored riddle after answering
     delete activeRiddles[m.sender];
   }
 };
