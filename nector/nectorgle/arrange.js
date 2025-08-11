@@ -53,7 +53,8 @@ const arrangeCommand = async (m, Matrix) => {
     }).join('\n');
 
     await Matrix.sendMessage(m.from, {
-      text: `🎲 *Random Arrangement:*\n\n${arrangedList}`
+      text: `🎲 *Random Arrangement:*\n\n${arrangedList}`,
+      quoted: m // <-- makes bot reply to your message
     });
   }
 };
