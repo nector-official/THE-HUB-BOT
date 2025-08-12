@@ -1,208 +1,54 @@
 import config from '../../config.cjs';
 
-const menu = async (m, sock) => {
-  const prefix = config.PREFIX;
-  const cmd = m.body.startsWith(prefix)
-    ? m.body.slice(prefix.length).split(' ')[0].toLowerCase()
-    : '';
-  const text = m.body.slice(prefix.length + cmd.length).trim();
+const logos = [
+  "🟣✨《 ＴＨＥ-ＨＵＢ 》✨🟣",
+  "💜⚡『 ＴＨＥ-ＨＵＢ 』⚡💜",
+  "🔮🌟【 ＴＨＥ-ＨＵＢ 】🌟🔮",
+  "💠🔥〘 ＴＨＥ-ＨＵＢ 〙🔥💠",
+  "🎯💎《 ＴＨＥ-ＨＵＢ 》💎🎯"
+];
 
-  if (cmd === "menu") {
-    const start = new Date().getTime();
-    await m.React('🔥');
-    const end = new Date().getTime();
-    const responseTime = ((end - start) / 1000).toFixed(2);
+const menuCommand = async (m, Matrix) => {
+  try {
+    await react(m, "📜");
 
-    const uptimeSeconds = process.uptime();
-    const hours = Math.floor(uptimeSeconds / 3600);
-    const minutes = Math.floor((uptimeSeconds % 3600) / 60);
-    const seconds = Math.floor(uptimeSeconds % 60);
-    const uptime = `${hours}h ${minutes}m ${seconds}s`;
+    // Pick a random logo style each time
+    const randomLogo = logos[Math.floor(Math.random() * logos.length)];
 
-    // Profile Picture Fallback
-    let profilePictureUrl = 'https://files.catbox.moe/03qy6k.jpg';
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 1500);
-      const pp = await sock.profilePictureUrl(m.sender, 'image', { signal: controller.signal });
-      clearTimeout(timeout);
-      if (pp) profilePictureUrl = pp;
-    } catch {
-      console.log('🖼️ Failed to fetch profile pic.');
-    }
+    let menuText = `
+${randomLogo}
 
-    const menuText = `
-┏━✦━ ✨『 *THE-HUB-BOT* 』✨ ━✦━┓
-┃ 🤖 *Bot:*     THE-HUB-BOT
-┃ 🔧 *Version:* 2.0.0
-┃ 📡 *Mode:*    Public
-┃ ⚡ *Speed:*   ${responseTime}s
-┃ ⏱️ *Uptime:*  ${uptime}
-┃ 🧩 *Prefix:*  ${prefix}
-┃ 👑 *Owner:*   ⓃⒺCⓉOR🍯
-┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+👤 *Owner:* ${config.OWNER_NAME}
+🤖 *Bot:* ${config.BOT_NAME}
+📌 *Prefix:* ${config.PREFIX}
 
-🌟 *Welcome to the command hub!* 🌟
-╭─⟤ ✨ *𝑴𝑨𝑰𝑵 𝑴𝑬𝑵𝑼* ⟢ ──────
-│
-├── 🛠️ *Utility & Tools*
-│   ├ ⚡ .uptime    ⚙️
-│   ├ 🪄 .jid       🔍
-│   ├ 🛰️ .ping      📶
-│   ├ 📝 .request   📨
-│   ├ 🧰 .repo      🔧
-│   ├ 📦 .app       📱
-│   └ 🌐 .host      💻
-│
-├── 🌐 *Internet / Media*
-│   ├ ☀️ .weather   🌦️
-│   ├ 🎶 .play      🎧
-│   ├ 🎵 .play2     🎼
-│   ├ 🎺 .play3     🎷
-│   ├ 📹 .vv        🎥
-│   ├ 📺 .vv2       🎬
-│   ├ 📼 .vv3       📀
-│   ├ 🎞️ .video    📹
-│   ├ 🎯 .tiktokdl  🎵
-│   ├ 🐼 .tiktok    🎭
-│   ├ 🐦 .fbdl      🕊️
-│   ├ 🐘 .fb        📘
-│   ├ 🐳 .facebook  🌊
-│   ├ 🚀 .todown    ⬇️
-│   ├ 🎤 .lyrics    🎙️
-│   ├ 🖼️ .gimage    🖌️
-│   ├ 📸 .img       📷
-│   └ 🌄 .image     🏞️
-│
-├── 🎉 *Fun & Social*
-│   ├ 😈 .insult    👹
-│   ├ 💘 .love      💖
-│   └ 🎲 .dare      🎯
-│
-├── 📖 *Religion & AI*
-│   ├ 📜 .bible     ✝️
-│   └ 🤖 .gpt       🧠
-│
-├── 🔗 *Group Links & Invites*
-│   ├ 🔗 .linkgc    🌐
-│   ├ 🏷️ .grouplink 🔍
-│   ├ 🎫 .invite    ✉️
-│   ├ 🧲 .bring     💌
-│   └ 🚪 .join      🚶
-│
-├── 👥 *Group Management*
-│   ├ 🎉 .welcome   🎊
-│   ├ 🏷️ .tagall    🗣️
-│   ├ 💬 .statusreply 📝
-│   ├ 📝 .groupinfo 📰
-│   ├ 🔓 .group open/close 🔒
-│   ├ 🖼️ .getpp     🖼️
-│   ├ 🚶 .left      🚪
-│   ├ 🏃 .exit      🏠
-│   ├ 🚀 .leave     🏃
-│   ├ ❌ .remove    🚫
-│   ├ 👢 .kick      👢
-│   └ 💣 .kickall   💥
-│
-├── 🛡️ *Admin / Moderation*
-│   ├ 🔥 .makeadmin 👑
-│   ├ 🚀 .adminup   🛡️
-│   ├ 🎯 .promote   🏆
-│   ├ 🪓 .unadmin   🔽
-│   ├ ⬇️ .demote    🚫
-│   ├ 🗑️ .del       🗑️
-│   ├ 🚮 .delete    ✂️
-│   ├ 🌍 .blockcountry 🚷
-│   ├ 🚧 .blockunknown 🔒
-│   ├ 📵 .anticall  🚫
-│   ├ ⚔️ .antispam  🛡️
-│   ├ 🗃️ .antidelete on/off 🗂️
-│   ├ 🛡️ .security  🔐
-│   ├ 🐞 .bug       🪲
-│   └ 📣 .report    📝
-│
-├── ⚙️ *Group Settings*
-│   ├ 🔧 .settings  🛠️
-│   ├ 🔤 .setprefix 🔠
-│   ├ 🏷️ .setname   📝
-│   ├ 📝 .setgroupname 🏷️
-│   ├ 🖊️ .setgroupbio 📰
-│   ├ 📜 .setdesc   📖
-│   └ 📑 .setdescription 📝
-│
-├── 🔄 *Automation*
-│   ├ 🤖 .autotyping 🔄
-│   ├ 👁️ .autostatusview 👀
-│   ├ 👓 .autosview 🕶️
-│   ├ 📺 .autostatus 📝
-│   ├ 🎥 .autorecording 🎬
-│   ├ ❤️ .autoreact ❤️
-│   ├ 📖 .autoread   📚
-│   └ 🔥 .alwaysonline 🌐
-│
-├── 🎭 *Sticker & Media*
-│   ├ 🎨 .sticker   🖌️
-│   ├ 🗂️ .vcf       📇
-│   ├ 🔗 .url       🌎
-│   └ 🖼️ .logo      🎨
-│
-├── 🤖 *Bot Controls*
-│   ├ 🛠️ .update    🔄
-│   ├ 👑 .owner     👤
-│   ├ 🐙 .clonebot  🐚
-│   ├ 🪄 .pair      🧩
-│   ├ 🔍 .getpair   🧩
-│   ├ ⚖️ .mode      ⚙️
-│   ├ 💬 .chatbox   💭
-│   └ 🌟 .addprem   💎
-│
-├── 📜 *Menus & Misc*
-│   ├ 📜 .menu      🗒️
-│   ├ 📋 .menu2     📄
-│   ├ 🪄 .ht        ✨
-│   └ 🕶️ .hidetag   🥷
-│
-╰───────────────────────
+╭─❏ *General Commands*
+│  📌 ${config.PREFIX}menu - Show this menu
+│  🎵 ${config.PREFIX}play <song> - Download audio
+│  🎥 ${config.PREFIX}video <title> - Download video
+│  🗣 ${config.PREFIX}tts <text> - Text to speech
+│  🌐 ${config.PREFIX}translate <lang> <text> - Translate text
+│  💬 ${config.PREFIX}ai <question> - Chat with AI
+│  📚 ${config.PREFIX}fact - Get a random fact
+│  😆 ${config.PREFIX}joke - Get a random joke
+│  💡 ${config.PREFIX}advice - Get random advice
+╰───────────────
 
+╭─❏ *Group Commands*
+│  📢 ${config.PREFIX}tagall - Mention everyone
+│  🚫 ${config.PREFIX}antilink on/off - Anti-link
+│  📥 ${config.PREFIX}kick <@tag> - Remove member
+│  ➕ ${config.PREFIX}add <number> - Add member
+│  🛡 ${config.PREFIX}promote <@tag> - Make admin
+│  🪶 ${config.PREFIX}demote <@tag> - Remove admin
+╰───────────────
 
-━━━ ❖ ⚡ *THE-HUB-BOT V2.0* ⚡ ❖ ━━━
-✨ Innovating Chat, One Command at a Time ✨
-`.trim();
+💜 *Powered by THE-HUB*
+    `;
 
-    // Newsletter Context
-    const newsletterContext = {
-      forwardingScore: 999,
-      isForwarded: true,
-      forwardedNewsletterMessageInfo: {
-        newsletterName: "THE-HUB-BOT",
-        newsletterJid: "120363395396503029@newsletter"
-      }
-    };
-
-    // Send Image Menu
-    await sock.sendMessage(m.from, {
-      image: { url: profilePictureUrl },
-      caption: menuText,
-      contextInfo: newsletterContext
-    }, { quoted: m });
-
-    // 🎧 Random Songs
-    const songUrls = [
-      'https://files.catbox.moe/2b33jv.mp3',
-      'https://files.catbox.moe/0cbqfa.mp3',
-      'https://files.catbox.moe/j4ids2.mp3',
-      'https://files.catbox.moe/vv2qla.mp3'
-    ];
-    const randomSong = songUrls[Math.floor(Math.random() * songUrls.length)];
-
-    await sock.sendMessage(m.from, {
-      audio: { url: randomSong },
-      mimetype: 'audio/mpeg',
-      ptt: false,
-      contextInfo: newsletterContext
-    }, { quoted: m });
+    await Matrix.sendMessage(m.from, { text: menuText }, { quoted: m });
+  } catch (error) {
+    console.error(error);
+    await m.reply("❌ Could not load menu.");
   }
 };
-
-export default menu;
-      
