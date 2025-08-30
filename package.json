@@ -1,24 +1,23 @@
 {
-  "name": "THE-HUB-BOT",
+  "name": "THE-HUB",
   "version": "2.0.0",
   "description": "Better than before",
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "pm2 start index.js --deep-monitoring --attach --name THE-HUB-BOT",
-    "stop": "pm2 stop THE-HUB-BOT",
-    "restart": "pm2 restart THE-HUB-BOT"
+    "start": "pm2 start index.js --deep-monitoring --attach --name POPKID-GLE",
+    "stop": "pm2 stop THE-HUB",
+    "restart": "pm2 restart THE-HUB"
   },
-  "keywords": ["THE-HUB-BOT", "whatsapp-bot", "whatsapp md bot"],
-  "author": "THE-HUB-BOT",
+  "keywords": ["popkid-gle", "whatsapp-bot", "whatsapp md bot"],
+  "author": "THE-HUB",
   "license": "ISC",
   "dependencies": {
-    "@whiskeysockets/baileys": "npm:asitha-new-v99",
+    "@whiskeysockets/baileys": "github:EdderBot02/bail",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@google/generative-ai": "^0.9.0",
     "@hapi/boom": "^10.0.1",
     "@xaviabot/fb-downloader": "^1.0.14",
-    "@vitalets/google-translate-api": "^9.2.0",
     "acrcloud": "^1.4.0",
     "adm-zip": "^0.5.16",
     "api-dylux": "^1.8.3",
@@ -61,10 +60,10 @@
     "stream": "^0.0.3",
     "tesseract.js": "^5.1.0",
     "translate-google-api": "^1.0.4",
+    "unzipper": "^0.10.14",
     "url": "^0.11.4",
     "uuid": "^9.0.1",
     "wasitech": "npm:@distube/ytdl-core",
-    "xml2js": "^0.4.23",
     "yt-search": "^2.11.0"
   }
 }
