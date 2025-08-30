@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "pm2 start index.js --deep-monitoring --attach --name POPKID-GLE",
+    "start": "pm2 start index.js --deep-monitoring --attach --name THE-HUB",
     "stop": "pm2 stop THE-HUB",
     "restart": "pm2 restart THE-HUB"
   },
