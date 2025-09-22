@@ -1,24 +1,24 @@
 {
-  "name": "Toxic-MD",
+  "name": "THE-HUB-BOT",
   "version": "2.0.0",
   "description": "A simple baileys powered WhatsApp bot multidevice",
-  "main": "toxic.js",
+  "main": "index.js",
   "scripts": {
-    "test": "node toxic.js",
-    "s": "node toxic.js",
-    "toxictech": "pm2 start toxic.js --attach",
+    "test": "node index.js",
+    "s": "node index.js",
+    "toxictech": "pm2 start index.js --attach",
     "c": "tsc"
   },
   "keywords": [
     "toxicmdbot",
     "freewhatsappbot",
     "botwhatsapp",
-    "Toxic-MD",
+    "THE-HUB-BOT",
     "toxicmd",
     "wabot",
     "toxicmultidevice",
     "whatsappbot",
-    "Toxic-Bot"
+    "THE-HUB-BOT"
   ],
   "author": "xhclinton",
   "license": "ISC",
