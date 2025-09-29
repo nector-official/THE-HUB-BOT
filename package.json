@@ -1,6 +1,6 @@
 {
 "name": "THE-HUB-BOT",
-"version": "2.1.1",
+"version": "2.1.2",
 "description": "Better than before",
 "main": "index.js",
 "type": "module",
@@ -44,6 +44,7 @@
 "jpeg-js": "^0.4.4",
 "jsqr": "^1.4.0",
 "libphonenumber": "^0.0.10",
+"megajs": "^1.1.0",
 "moment-timezone": "^0.5.45",
 "node-cache": "^5.1.2",
 "node-cron": "^3.0.3",
