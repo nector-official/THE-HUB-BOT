@@ -1,6 +1,6 @@
 {
 "name": "THE-HUB-BOT",
-"version": "2.1.0",
+"version": "2.1.1",
 "description": "Better than before",
 "main": "index.js",
 "type": "module",
@@ -15,8 +15,8 @@
 "author": "THE-HUB-BOT",
 "license": "ISC",
 "dependencies": {
+"@whiskeysockets/baileys": "^6.7.17",
 "@adiwajshing/baileys": "npm:@whiskeysockets/baileys@^6.7.17",
-"@whiskeysockets/baileys": "7.0.0-rc.3",
 "@ffmpeg-installer/ffmpeg": "^1.1.0",
 "@google/generative-ai": "^0.9.0",
 "@hapi/boom": "^10.0.1",
