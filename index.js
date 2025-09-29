@@ -10,7 +10,7 @@ import {
 } from "@whiskeysockets/baileys";
 
 import { Handler, Callupdate, GroupUpdate } from "./nector/nectord/nectordd.js";
-import { autoStartAutoBio } from "./nector/nectord/autobio.js";
+import { autoStartAutoBio } from "./nector/nectorgle/autobio.js";
 
 import express from "express";
 import pino from "pino";
