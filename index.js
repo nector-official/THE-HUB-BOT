@@ -132,7 +132,7 @@ async function start() {
           // simple startup message (cleaned)
           try {
             await sock.sendMessage(sock.user.id, {
-              text: '✅ Connection successful!\n\ntype .menu to get started\n\nEnjoy THE-HUB-BOT 🎉'
+              text: '✅ Connection successful! Enjoy THE-HUB-BOT 🎉'
             });
             console.log('✅ Startup message sent.');
           } catch (e) {
@@ -207,12 +207,12 @@ async function init() {
 const app = express();
 const PORT = process.env.PORT || 10000;
 app.use(express.static(path.join(__dirname)));
-app.get('/', (req, res) => re
-s.sendFile(path.join(__dirname, 'index.html')));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.listen(PORT, () => console.log(`🌐 Server running on port ${PORT}`));
 
 init().catch(err => {
   console.error('Init failed:', err);
   process.exit(1);
 });
+
 
