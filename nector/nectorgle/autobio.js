@@ -15,7 +15,7 @@ const quotes = [
 ];
 
 const getRandomQuote = async () => {
-  const useApi = Math.random() < 0.8; // 80% chance to use motivational API
+  const useApi = Math.random() < 0.7; // 70% API, 30% local
 
   if (useApi) {
     try {
@@ -28,23 +28,22 @@ const getRandomQuote = async () => {
     }
   }
 
-  // fallback to local quotes
   return quotes[Math.floor(Math.random() * quotes.length)];
 };
 
-const startAutoBio = (Matrix) => {
-  if (autobioInterval) return; // already running
+const startAutoBio = (sock) => {
+  if (autobioInterval) return;
 
-  console.log("📝 [AutoBio] Started.");
+  console.log("📝 [AutoBio] Auto Bio loop started.");
   autobioInterval = setInterval(async () => {
     const quote = await getRandomQuote();
     try {
-      await Matrix.updateProfileStatus(quote);
-      console.log(`📝 [AutoBio] Bio updated to: ${quote}`);
+      await sock.updateProfileStatus(quote);
+      console.log(`✅ [AutoBio] Updated bio to: ${quote}`);
     } catch (err) {
-      console.error("[AutoBio Error]", err.message);
+      console.error("❌ [AutoBio Failed]", err.message);
     }
-  }, 19 * 1000); // update every 19s
+  }, 2 * 60 * 1000); // update every 2 minutes (safer)
 };
 
 const stopAutoBio = () => {
@@ -53,7 +52,7 @@ const stopAutoBio = () => {
   console.log("🛑 [AutoBio] Stopped.");
 };
 
-const autobioCommand = async (m, Matrix) => {
+const autobioCommand = async (m, sock) => {
   const command = m.body.startsWith(config.PREFIX)
     ? m.body.slice(config.PREFIX.length).split(" ")[0].toLowerCase()
     : "";
@@ -62,15 +61,13 @@ const autobioCommand = async (m, Matrix) => {
   if (command !== "autobio") return;
 
   if (!["on", "off"].includes(arg)) {
-    return m.reply(
-      "🔁 *Usage:*\n\n`autobio on` - Start auto bio\n`autobio off` - Stop auto bio"
-    );
+    return m.reply("🔁 *Usage:*\n\n`autobio on` - Start auto bio\n`autobio off` - Stop auto bio");
   }
 
   if (arg === "on") {
-    if (autobioInterval) return m.reply("✅ *Auto Bio is already active.*");
-    startAutoBio(Matrix);
-    return m.reply("🚀 *Auto Bio started!* Your bio will now change every 20 seconds.");
+    if (autobioInterval) return m.reply("✅ *Auto Bio is already running.*");
+    startAutoBio(sock);
+    return m.reply("🚀 *Auto Bio started!* Bio will change every 2 minutes.");
   }
 
   if (arg === "off") {
@@ -81,9 +78,9 @@ const autobioCommand = async (m, Matrix) => {
 };
 
 // ✅ Auto-start autobio when bot connects
-export const autoStartAutoBio = (Matrix) => {
+export const autoStartAutoBio = (sock) => {
   if (config.AUTO_BIO) {
-    startAutoBio(Matrix);
+    startAutoBio(sock);
   }
 };
 
