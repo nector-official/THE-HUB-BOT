@@ -25,9 +25,10 @@ const book = async (m, sock) => {
     const olUrl = `https://openlibrary.org/search.json?title=${encodeURIComponent(query)}&limit=5`;
     const olData = await axios.get(olUrl);
 
-    let title, author, year, description, downloadLink, previewLink, coverURL;
+    let title, author, year, coverURL, downloadLink, description;
 
     if (olData.data.docs && olData.data.docs.length > 0) {
+      // Try each edition until we find a PDF
       for (const olBook of olData.data.docs) {
         title = olBook.title || "Unknown Title";
         author = olBook.author_name ? olBook.author_name.join(", ") : "Unknown Author";
@@ -38,72 +39,75 @@ const book = async (m, sock) => {
 
         const editionKeys = olBook.edition_key || [];
         for (const olid of editionKeys) {
-          downloadLink = `https://archive.org/download/${olid}/${olid}.pdf`;
-          break; // take first edition with PDF
+          const link = `https://archive.org/download/${olid}/${olid}.pdf`;
+          // Optionally, we could test if link exists by HEAD request; for now we assume it's valid
+          downloadLink = link;
+          break; // take first available edition
         }
 
-        if (downloadLink) break;
+        if (downloadLink) break; // found PDF, stop looping editions
       }
     }
 
-    // --- STEP 2: Fallback to Google Books if no PDF found ---
-    if (!downloadLink) {
-      const gbUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=1`;
-      const gbData = await axios.get(gbUrl);
-
-      if (!gbData.data.items || gbData.data.items.length === 0) {
-        return sock.sendMessage(m.from, {
-          text: `❌ *No book found for:* _${query}_`
-        }, { quoted: m });
-      }
-
-      const gbBook = gbData.data.items[0].volumeInfo;
-      title = gbBook.title || "Unknown Title";
-      author = gbBook.authors ? gbBook.authors.join(", ") : "Unknown Author";
-      year = gbBook.publishedDate || "N/A";
-      const pages = gbBook.pageCount || "N/A";
-      description = gbBook.description ? gbBook.description.substring(0, 400) + "..." : "No description available.";
-      coverURL = gbBook.imageLinks?.thumbnail || null;
-      previewLink = gbBook.previewLink || "https://books.google.com/";
-      downloadLink = null; // Google Books cannot provide PDF
-    } else {
-      previewLink = `https://openlibrary.org/search?q=${encodeURIComponent(query)}`;
-    }
-
-    // --- STEP 3: Prepare message with buttons ---
-    const caption = `╭───『 *📚 Book Info* 』
+    // If a PDF was found, send info + PDF
+    if (downloadLink) {
+      const caption = `╭───『 *📚 Book Found* 』
 │ 📖 *Title:* ${title}
 │ ✍️ *Author(s):* ${author}
 │ 🗓️ *Year:* ${year}
 │ 📝 *Description:* ${description}
+╰──────────────────────
+📄 Click below to download the book!`;
+
+      await sock.sendMessage(m.from, {
+        document: { url: downloadLink },
+        fileName: `${title}.pdf`,
+        mimetype: "application/pdf",
+        caption: caption
+      }, { quoted: m });
+
+      await m.React("✅");
+      return;
+    }
+
+    // --- STEP 2: Fallback to Google Books ---
+    const gbUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=1`;
+    const gbData = await axios.get(gbUrl);
+
+    if (!gbData.data.items || gbData.data.items.length === 0) {
+      return sock.sendMessage(m.from, {
+        text: `❌ *No book found for:* _${query}_`
+      }, { quoted: m });
+    }
+
+    const gbBook = gbData.data.items[0].volumeInfo;
+    title = gbBook.title || "Unknown Title";
+    author = gbBook.authors ? gbBook.authors.join(", ") : "Unknown Author";
+    year = gbBook.publishedDate || "N/A";
+    const pages = gbBook.pageCount || "N/A";
+    description = gbBook.description ? gbBook.description.substring(0, 400) + "..." : "No description available.";
+    coverURL = gbBook.imageLinks?.thumbnail || null;
+    const previewLink = gbBook.previewLink || "Not available";
+
+    const caption = `╭───『 *📚 Book Info* 』
+│ 📖 *Title:* ${title}
+│ ✍️ *Author(s):* ${author}
+│ 🏢 *Publisher:* ${gbBook.publisher || "N/A"}
+│ 📑 *Pages:* ${pages}
+│ 📝 *Description:* ${description}
+│ 🔗 *Preview:* ${previewLink}
+│ ❌ *Downloadable PDF not available*
 ╰──────────────────────`;
 
-    const buttons = [];
-
-    if (downloadLink) {
-      buttons.push({
-        buttonId: `download_pdf_${encodeURIComponent(downloadLink)}`,
-        buttonText: { displayText: "✅ Download PDF" },
-        type: 1
-      });
+    if (coverURL) {
+      await sock.sendMessage(m.from, {
+        image: { url: coverURL },
+        caption: caption
+      }, { quoted: m });
+    } else {
+      await sock.sendMessage(m.from, { text: caption }, { quoted: m });
     }
 
-    if (previewLink) {
-      buttons.push({
-        buttonId: `read_online_${encodeURIComponent(previewLink)}`,
-        buttonText: { displayText: "🔗 Read Online" },
-        type: 1
-      });
-    }
-
-    const buttonMessage = {
-      caption,
-      buttons,
-      headerType: coverURL ? 4 : 1,
-      image: coverURL ? { url: coverURL } : undefined,
-    };
-
-    await sock.sendMessage(m.from, buttonMessage, { quoted: m });
     await m.React("✅");
 
   } catch (error) {
@@ -112,33 +116,6 @@ const book = async (m, sock) => {
       text: `⚠️ *An error occurred while fetching the book.*`
     }, { quoted: m });
     await m.React("⚠️");
-  }
-};
-
-// --- STEP 4: Handle button clicks ---
-export const handleBookButton = async (buttonId, m, sock) => {
-  if (!buttonId.startsWith("download_pdf_")) return;
-
-  const pdfUrl = decodeURIComponent(buttonId.replace("download_pdf_", ""));
-  const fileName = `${m.body || "book"}.pdf`;
-
-  try {
-    await sock.sendMessage(m.from, {
-      document: { url: pdfUrl },
-      fileName: fileName,
-      mimetype: "application/pdf",
-      caption: "📄 Here is your downloadable book PDF!"
-    }, { quoted: m });
-
-    await m.React("✅");
-  } catch (err) {
-    console.error("[Book PDF Error]", err.message);
-    await sock.sendMessage(m.from, { text: "⚠️ Failed to send PDF." }, { quoted: m });
-    await m.React("⚠️");
-  }
-};
-
-export default book;
   }
 };
 
