@@ -53,6 +53,8 @@ async function downloadSessionData() {
       return false;
     }
 
+    // Your SESSION_ID format used previously: prefix~<fileId>#<key>
+    // e.g. "nector~N9pBTIxL#Jg9DoCw..."
     const parts = config.SESSION_ID.split('~')[1];
     if (!parts || !parts.includes('#')) {
       console.error('❌ Invalid SESSION_ID format! It must contain both file ID and decryption key.');
@@ -82,11 +84,13 @@ async function downloadSessionData() {
 
 async function start() {
   try {
+    // load auth state (creates files under sessionDir)
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
 
     const { version, isLatest } = await fetchLatestBaileysVersion();
     console.log('🤖 THE-HUB-BOT using WA v' + version.join('.') + ' | Latest:', isLatest);
 
+    // create socket
     const sock = makeWASocket({
       version,
       logger: sockLogger,
@@ -102,53 +106,35 @@ async function start() {
       }
     });
 
+    // bind store to socket events so it caches messages
     if (store && typeof store.bind === 'function') store.bind(sock.ev);
 
+    // save creds when updated
     sock.ev.on('creds.update', saveCreds);
 
     // connection update (open/close)
     sock.ev.on('connection.update', async update => {
       const { connection, lastDisconnect } = update;
-
       if (connection === 'close') {
-        const reason = lastDisconnect?.error?.output?.statusCode;
-        console.log("⚠️ Connection closed. Reason:", reason);
-
-        if (reason === DisconnectReason.loggedOut) {
-          console.log('❌ Logged out from WhatsApp. Please delete session and re-scan QR.');
-          process.exit(0);
+        // reconnect unless logged out
+        const shouldReconnect =
+          lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+        if (shouldReconnect) {
+          console.log('♻️ Connection closed, trying restart...');
+          start();
         } else {
-          console.log('♻️ Trying to reconnect in 5s...');
-          setTimeout(() => start(), 5000);
+          console.log('❌ Logged out. Please remove session and re-scan QR.');
         }
-
       } else if (connection === 'open') {
         if (initialConnection) {
           console.log('✅ THE-HUB-BOT is now online!');
 
+          // simple startup message (cleaned)
           try {
-            const myJid = sock.user.id; // ✅ correct JID
-            const imageUrl = 'https://telegra.ph/file/bef2ec9f00a62adfe8db0.jpg';
-
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            await sock.sendMessage(myJid, {
-              image: { url: imageUrl },
-              caption: '🤖 THE-HUB BOT is now online!\n\nPowered by NECTOR 🍯',
-              contextInfo: {
-                forwardingScore: 999,
-                isForwarded: true,
-                externalAdReply: {
-                  title: 'THE-HUB BOT',
-                  body: 'Always online 🚀',
-                  thumbnailUrl: imageUrl,
-                  sourceUrl: 'https://whatsapp.com/channel/0029Vb3zzYJ9xVJk0Y65c81W',
-                  mediaType: 1
-                }
-              }
+            await sock.sendMessage(sock.user.id, {
+              text: '✅ Connection successful! Enjoy THE-HUB-BOT 🎉'
             });
-
-            console.log('✅ Startup message sent to self.');
+            console.log('✅ Startup message sent.');
           } catch (e) {
             console.error('❌ Failed to send startup message:', e?.message ?? e);
           }
@@ -160,13 +146,20 @@ async function start() {
       }
     });
 
-    // messages
+    // wire events: messages, calls, group updates
     sock.ev.on('messages.upsert', async m => {
       try {
+        // first, let your custom Handler process it (commands, responses etc)
         Handler(m, sock, MAIN_LOGGER);
 
+        // then (like original) run autoreact if enabled and message is not from me
         const msg = m.messages?.[0];
-        if (msg && !msg.key?.fromMe && config.AUTO_REACT && msg.message) {
+        if (
+          msg &&
+          !msg.key?.fromMe &&
+          config.AUTO_REACT &&
+          msg.message
+        ) {
           const emoji = emojis[Math.floor(Math.random() * emojis.length)];
           await doReact(emoji, msg, sock);
         }
@@ -175,9 +168,13 @@ async function start() {
       }
     });
 
+    // call events -> custom Callupdate
     sock.ev.on('call', callData => Callupdate(callData, sock));
+
+    // group participant updates -> custom GroupUpdate
     sock.ev.on('group-participants.update', participantsUpdate => GroupUpdate(sock, participantsUpdate));
 
+    // set public/private mode as per config (keeps parity with your obf code)
     if (config.MODE === 'private') sock.public = false;
     else if (config.MODE === 'public') sock.public = true;
 
@@ -189,6 +186,7 @@ async function start() {
 }
 
 async function init() {
+  // If a local creds.json exists we use it; otherwise try to download via SESSION_ID
   if (fs.existsSync(credsPath)) {
     console.log('🔒 Session file found, proceeding without QR.');
     await start();
@@ -205,7 +203,7 @@ async function init() {
   }
 }
 
-// Express server (keeps app alive on Render)
+/* Express server (keeps app alive on Render) */
 const app = express();
 const PORT = process.env.PORT || 10000;
 app.use(express.static(path.join(__dirname)));
@@ -216,6 +214,5 @@ init().catch(err => {
   console.error('Init failed:', err);
   process.exit(1);
 });
-
 
 
