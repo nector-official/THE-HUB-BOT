@@ -18,38 +18,88 @@ const football = async (m, sock) => {
     return;
   }
 
+  const leagueMap = {
+    PL: "PL",
+    CL: "UCL",
+    WC: "WC",
+    BL1: "BL1",
+    DED: "DED",
+    BSA: "BSA",
+    PD: "PD",
+    FL1: "FL1",
+    ELC: "ELC",
+    PPL: "PPL",
+    EC: "EC",
+    SA: "SA"
+  };
+
+  const apiCode = leagueMap[leagueCode];
+  if (!apiCode) {
+    await sock.sendMessage(m.from, { text: `❌ Unknown league code: ${leagueCode}` }, { quoted: m });
+    return;
+  }
+
   await m.React("⚽");
 
   try {
     const API_KEY = "578d0a840ee047d5a5a7da7410c94bc4";
+
+    // Current week: Sunday → Saturday
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday
+    startOfWeek.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(endOfWeek.getDate() + 6); // Saturday
+    endOfWeek.setHours(23, 59, 59, 999);
+
     const url = `https://api.football-data.org/v4/matches`;
     const { data } = await axios.get(url, {
       headers: { "X-Auth-Token": API_KEY }
     });
 
-    // Filter by league code
-    const matches = data.matches.filter(match => match.competition.code === leagueCode);
+    // Filter matches by league & week
+    const matches = data.matches.filter(match => {
+      const matchDate = new Date(match.utcDate);
+      return match.competition.code === apiCode && matchDate >= startOfWeek && matchDate <= endOfWeek;
+    });
 
-    if (matches.length === 0) {
+    if (!matches || matches.length === 0) {
       await sock.sendMessage(m.from, {
-        text: `❌ *No matches found for league:* ${leagueCode}`
+        text: `❌ *No matches found this week for league:* ${leagueCode}`
       }, { quoted: m });
       await m.React("❌");
       return;
     }
 
-    // Nairobi timezone conversion
+    // Nairobi timezone
     const timezoneOffset = 3; // UTC+3
-    const matchList = matches.map(match => {
+    const daysMap = {};
+
+    // Group matches by day
+    matches.forEach(match => {
       const dateUTC = new Date(match.utcDate);
       const dateLocal = new Date(dateUTC.getTime() + timezoneOffset * 60 * 60 * 1000);
+      const weekday = dateLocal.toLocaleDateString('en-GB', { weekday: 'long' });
       const dateStr = dateLocal.toISOString().replace("T", " ").slice(0, 16);
 
-      return `⚔️ *${match.homeTeam.name} vs ${match.awayTeam.name}*\n🗓️ ${dateStr} (Nairobi Time)\n🏟️ ${match.venue || "N/A"}\n`;
-    }).join("\n─────────────────\n");
+      const matchText = `⚔️ *${match.homeTeam.name} vs ${match.awayTeam.name}*\n🕒 ${dateStr} (Nairobi Time)\n🏟️ ${match.venue || "N/A"}`;
+
+      if (daysMap[weekday]) {
+        daysMap[weekday].push(matchText);
+      } else {
+        daysMap[weekday] = [matchText];
+      }
+    });
+
+    // Build message
+    let matchList = '';
+    for (const day of Object.keys(daysMap)) {
+      matchList += `📅 *${day}*\n${daysMap[day].join('\n')}\n\n`;
+    }
 
     await sock.sendMessage(m.from, {
-      text: `📅 *Matches for ${leagueCode}:*\n\n${matchList}`
+      text: `📆 *Matches this week for ${leagueCode}:*\n\n${matchList.trim()}`
     }, { quoted: m });
 
     await m.React("✅");
