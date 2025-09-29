@@ -1,6 +1,6 @@
 {
 "name": "THE-HUB-BOT",
-"version": "2.1.2",
+"version": "2.1.0",
 "description": "Better than before",
 "main": "index.js",
 "type": "module",
@@ -8,17 +8,15 @@
 "start": "node index.js"
 },
 "engines": {
-"node": "20.x"
+"node": "20.x",
+"npm": "9.x"
 },
-"keywords": [
-"NECTOR-SRT",
-"whatsapp-bot",
-"whatsapp-md-bot"
-],
-"author": "NECTOR 🍯",
+"keywords": ["NECTOR-SRT", "whatsapp-bot", "whatsapp md bot"],
+"author": "THE-HUB-BOT",
 "license": "ISC",
 "dependencies": {
-"@whiskeysockets/baileys": "^7.0.0-rc.3",
+"@adiwajshing/baileys": "npm:@whiskeysockets/baileys@^6.7.17",
+"@whiskeysockets/baileys": "7.0.0-rc.3",
 "@ffmpeg-installer/ffmpeg": "^1.1.0",
 "@google/generative-ai": "^0.9.0",
 "@hapi/boom": "^10.0.1",
@@ -36,6 +34,7 @@
 "ffmpeg": "^0.0.4",
 "file-type": "^19.0.0",
 "fluent-ffmpeg": "^2.1.3",
+"megajs": "^1.1.0",
 "fs-extra": "^11.2.0",
 "gifted-dls": "^1.3.0",
 "google-it": "^1.6.4",
@@ -44,11 +43,10 @@
 "jpeg-js": "^0.4.4",
 "jsqr": "^1.4.0",
 "libphonenumber": "^0.0.10",
-"megajs": "^1.1.0",
 "moment-timezone": "^0.5.45",
 "node-cache": "^5.1.2",
 "node-cron": "^3.0.3",
-"node-fetch": "^2.6.7",
+"node-fetch": "^3.3.2",
 "node-os-utils": "^1.3.7",
 "node-webpmux": "^3.2.0",
 "pdfkit": "^0.15.0",
@@ -58,10 +56,12 @@
 "qrcode-terminal": "^0.12.0",
 "readline": "^1.3.0",
 "remove.bg": "^1.3.0",
+"stream": "^0.0.3",
 "tesseract.js": "^5.1.0",
 "translate-google-api": "^1.0.4",
+"url": "^0.11.4",
 "uuid": "^9.0.1",
-"yt-search": "^2.13.1",
-"ytdl-core": "^4.11.5"
+"wasitech": "npm:@distube/ytdl-core",
+"yt-search": "^2.11.0"
 }
 }
