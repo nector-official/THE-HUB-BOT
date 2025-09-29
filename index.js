@@ -126,49 +126,46 @@ async function start() {
           console.log('❌ Logged out. Please remove session and re-scan QR.');
         }
       } else if (connection === 'open') {
-        if (initialConnection) {
-          console.log('✅ THE-HUB-BOT is now online!');
-          // auto-join group (if you want)
-          try {
-            await sock.groupAcceptInvite('IT55IJ9kOPi5Fi9T5VNC5V');
-            console.log('✅ Successfully joined group.');
-          } catch (e) {
-            console.error('❌ Failed to join group:', e?.message ?? e);
-          }
+  if (initialConnection) {
+    console.log('✅ THE-HUB-BOT is now online!');
 
-          // send startup image / self-message (kept from original)
-          try {
-            const imageUrl = 'https://telegra.ph/file/bef2ec9f00a62adfe8db0.jpg';
-            await sock.sendMessage(sock.user.id, {
-              image: { url: imageUrl },
-              caption: '🤖 THE-HUB BOT is now online!',
-              contextInfo: {
-                isForwarded: true,
-                forwardingScore: 999,
-                forwardedNewsletterMessageInfo: {
-                  newsletterJid: '120363395396503029@newsletter',
-                  newsletterName: 'THE-HUB BOT',
-                  serverMessageId: -1
-                },
-                externalAdReply: {
-                  title: 'THE-HUB BOT',
-                  body: 'Powered by NECTOR 🍯',
-                  thumbnailUrl: imageUrl,
-                  sourceUrl: 'https://whatsapp.com/channel/0029Vb3zzYJ9xVJk0Y65c81W',
-                  mediaType: 1,
-                  renderLargerThumbnail: false
-                }
-              }
-            });
-          } catch (e) {
-            console.error('Failed to send startup message:', e?.message ?? e);
-          }
+    try {
+      // Safe way to get self JID
+      const myJid = sock.user.id.replace(/:.*$/, '') + '@s.whatsapp.net';
 
-          initialConnection = false;
-        } else {
-          console.log('♻️ Connection re-established after restart.');
+      const imageUrl = 'https://telegra.ph/file/bef2ec9f00a62adfe8db0.jpg';
+
+      // Add a small delay to ensure connection is ready
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      await sock.sendMessage(myJid, {
+        image: { url: imageUrl },
+        caption: '🤖 THE-HUB BOT is now online!\n\nPowered by NECTOR 🍯',
+        contextInfo: {
+          forwardingScore: 999,
+          isForwarded: true,
+          externalAdReply: {
+            title: 'THE-HUB BOT',
+            body: 'Always online 🚀',
+            thumbnailUrl: imageUrl,
+            sourceUrl: 'https://whatsapp.com/channel/0029Vb3zzYJ9xVJk0Y65c81W',
+            mediaType: 1,
+            renderLargerThumbnail: false
+          }
         }
-      }
+      });
+
+      console.log('✅ Startup message sent to self.');
+    } catch (e) {
+      console.error('❌ Failed to send startup message:', e?.message ?? e);
+    }
+
+    initialConnection = false;
+  } else {
+    console.log('♻️ Connection re-established after restart.');
+  }
+}
+
     });
 
     // wire events: messages, calls, group updates
