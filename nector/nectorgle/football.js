@@ -1,47 +1,66 @@
 import config from '../../config.cjs';
 import axios from 'axios';
 
-const epl = async (m, sock) => {
+const football = async (m, sock) => {
   const prefix = config.PREFIX;
   const cmd = m.body.startsWith(prefix)
     ? m.body.slice(prefix.length).split(" ")[0].toLowerCase()
     : '';
-  if (cmd !== 'epl') return;
+  const args = m.body.trim().split(" ").slice(1);
+  const leagueCode = args[0] ? args[0].toUpperCase() : null;
+
+  if (cmd !== "football" && cmd !== "match") return;
+
+  if (!leagueCode) {
+    await sock.sendMessage(m.from, {
+      text: `❌ *Please provide a league code!*\n💡 Example: *${prefix}football PL*\n\nAvailable leagues:\nPL | Premier League\nCL | UEFA Champions League\nWC | FIFA World Cup\nBL1 | Bundesliga\nDED | Eredivisie\nBSA | Campeonato Brasileiro Série A\nPD | Primera Division\nFL1 | Ligue 1\nELC | Championship\nPPL | Primeira Liga\nEC | European Championship\nSA | Serie A`
+    }, { quoted: m });
+    return;
+  }
 
   await m.React("⚽");
 
   try {
-    const API_KEY = '578d0a840ee047d5a5a7da7410c94bc4'; // Replace with your key
-    const LEAGUE = 'PL'; // Premier League
-    const today = new Date();
-    const startDate = today.toISOString().split('T')[0];
-    const endDateObj = new Date();
-    endDateObj.setDate(today.getDate() + 7);
-    const endDate = endDateObj.toISOString().split('T')[0];
-
-    const url = `https://api.football-data.org/v4/competitions/${LEAGUE}/matches?dateFrom=${startDate}&dateTo=${endDate}`;
-    const { data } = await axios.get(url, { headers: { 'X-Auth-Token': API_KEY } });
-
-    if (!data.matches || data.matches.length === 0) {
-      return await sock.sendMessage(m.from, { text: '⚠️ *No EPL matches found for this week.*' }, { quoted: m });
-    }
-
-    let message = '📅 *EPL Matches This Week:*\n\n';
-    data.matches.forEach(match => {
-      const home = match.homeTeam.name;
-      const away = match.awayTeam.name;
-      const date = new Date(match.utcDate).toLocaleString('en-GB', { timeZone: 'Europe/London', hour12: false });
-      message += `⚽ ${home} vs ${away}\n🗓️ ${date}\n\n`;
+    const API_KEY = "578d0a840ee047d5a5a7da7410c94bc4";
+    const url = `https://api.football-data.org/v4/matches`;
+    const { data } = await axios.get(url, {
+      headers: { "X-Auth-Token": API_KEY }
     });
 
-    await sock.sendMessage(m.from, { text: message }, { quoted: m });
+    // Filter by league code
+    const matches = data.matches.filter(match => match.competition.code === leagueCode);
+
+    if (matches.length === 0) {
+      await sock.sendMessage(m.from, {
+        text: `❌ *No matches found for league:* ${leagueCode}`
+      }, { quoted: m });
+      await m.React("❌");
+      return;
+    }
+
+    // Nairobi timezone conversion
+    const timezoneOffset = 3; // UTC+3
+    const matchList = matches.map(match => {
+      const dateUTC = new Date(match.utcDate);
+      const dateLocal = new Date(dateUTC.getTime() + timezoneOffset * 60 * 60 * 1000);
+      const dateStr = dateLocal.toISOString().replace("T", " ").slice(0, 16);
+
+      return `⚔️ *${match.homeTeam.name} vs ${match.awayTeam.name}*\n🗓️ ${dateStr} (Nairobi Time)\n🏟️ ${match.venue || "N/A"}\n`;
+    }).join("\n─────────────────\n");
+
+    await sock.sendMessage(m.from, {
+      text: `📅 *Matches for ${leagueCode}:*\n\n${matchList}`
+    }, { quoted: m });
+
     await m.React("✅");
 
-  } catch (err) {
-    console.error("[EPL Command Error]", err.response ? err.response.data : err.message);
-    await sock.sendMessage(m.from, { text: '⚠️ *Could not fetch EPL matches.*' }, { quoted: m });
+  } catch (error) {
+    console.error("[Football Command Error]", error.message);
+    await sock.sendMessage(m.from, {
+      text: `⚠️ *Could not fetch matches.*`
+    }, { quoted: m });
     await m.React("⚠️");
   }
 };
 
-export default epl;
+export default football;
