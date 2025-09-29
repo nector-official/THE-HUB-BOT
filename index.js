@@ -1,2 +1,241 @@
-const _0x4292ba=_0x5d5f;(function(_0x47c246,_0x15a51f){const _0x2ee5fb=_0x5d5f,_0x1d990c=_0x47c246();while(!![]){try{const _0x433ee0=-parseInt(_0x2ee5fb(0x1cc))/0x1+parseInt(_0x2ee5fb(0x198))/0x2+-parseInt(_0x2ee5fb(0x1a3))/0x3+parseInt(_0x2ee5fb(0x1bd))/0x4+parseInt(_0x2ee5fb(0x18e))/0x5+parseInt(_0x2ee5fb(0x18d))/0x6*(-parseInt(_0x2ee5fb(0x1b6))/0x7)+-parseInt(_0x2ee5fb(0x19d))/0x8;if(_0x433ee0===_0x15a51f)break;else _0x1d990c['push'](_0x1d990c['shift']());}catch(_0x4d49d2){_0x1d990c['push'](_0x1d990c['shift']());}}}(_0x263b,0x670c7));import _0x1cb3df from'dotenv';_0x1cb3df[_0x4292ba(0x1ba)]();import{makeWASocket,fetchLatestBaileysVersion,DisconnectReason,useMultiFileAuthState}from'@whiskeysockets/baileys';import{Handler,Callupdate,GroupUpdate}from'./nector/nectord/nectordd.js';import _0xc0481c from'express';function _0x5d5f(_0x185de6,_0x585597){const _0x263b74=_0x263b();return _0x5d5f=function(_0x5d5fff,_0x10f255){_0x5d5fff=_0x5d5fff-0x17d;let _0x25bf80=_0x263b74[_0x5d5fff];return _0x25bf80;},_0x5d5f(_0x185de6,_0x585597);}import _0x97c8a9 from'pino';function _0x263b(){const _0xbbbf91=['✅\x20THE-HUB-BOT\x20is\x20now\x20online!','silent','133098YTZIpn','sendMessage','THE-HUB-BOT\x20whatsapp\x20user\x20bot','sendFile','call','split','✅\x20Successfully\x20joined\x20group.','private','MODE','SESSION_ID','index.html','output','THE-HUB-BOT','fromURL','creds.json','group-participants.update','♻️\x20Connection\x20reestablished\x20after\x20restart.','6YjUJHw','3378520xfYdPI','download','https://whatsapp.com/channel/0029Vb3zzYJ9xVJk0Y65c81W','PORT','✅\x20Session\x20downloaded,\x20starting\x20bot.','session','statusCode','message','NECTOR;;;','ᴘᴏᴡᴇʀᴇᴅ\x20ʙʏ\x20THE-HUB-BOT','1558172GAWXjq','Safari','green','❌\x20Failed\x20to\x20join\x20group:\x20','creds.update','7049576lofGYw','length',',\x22time\x22:\x22','\x20|\x20Latest:\x20','loadMessage','120363395396503029@newsletter','264927NcufeS','\x0a╔═════════════════\x0a║\x20*✅BOT\x20CONNECTED*\x0a╠═════════════════\x0a║\x20*⚡BOT-NAME\x20THE-HUB\x20-BOT*\x0a╚═════════════════\x0a║\x20*⌛ OWNER\x20NUM\x20:+254725474072*\x0a╚═════════════════','public','user','dirname','❌\x20No\x20session\x20found\x20or\x20invalid,\x20printing\x20QR.','listen','mkdirSync','includes','level','❌\x20Please\x20add\x20your\x20session\x20to\x20SESSION_ID\x20env\x20!!','child','trace','existsSync','https://files.catbox.moe/03qy6k.jpg','random','writeFile','messages','messages.upsert','2661659xCJiqv','groupAcceptInvite','mydata','use','config','join','Debugging\x20SESSION_ID:','1800552KeHAVk','log','Auto\x20react\x20error:','AUTO_REACT','🔄\x20Downloading\x20Session...','remoteJid','🔒\x20Session\x20Successfully\x20Loaded\x20!!','error','key','get','🌐\x20Server\x20running\x20on\x20port\x20','fromMe','static'];_0x263b=function(){return _0xbbbf91;};return _0x263b();}import _0x3786c2 from'fs';import'node-cache';import _0x28230c from'path';import _0x3c48af from'chalk';import'axios';import _0x909a79 from'./config.cjs';import _0x3c0792 from'./lib/autoreact.cjs';import{fileURLToPath}from'url';import{File}from'megajs';const {emojis,doReact}=_0x3c0792,app=_0xc0481c();let useQR=![],initialConnection=!![];const PORT=process['env'][_0x4292ba(0x191)]||0xbb8,MAIN_LOGGER=_0x97c8a9({'timestamp':()=>_0x4292ba(0x19f)+new Date()['toJSON']()+'\x22'}),logger=MAIN_LOGGER[_0x4292ba(0x1ae)]({});logger[_0x4292ba(0x1ac)]=_0x4292ba(0x1af);const __filename=fileURLToPath(import.meta['url']),__dirname=_0x28230c[_0x4292ba(0x1a7)](__filename),sessionDir=_0x28230c[_0x4292ba(0x1bb)](__dirname,_0x4292ba(0x193)),credsPath=_0x28230c[_0x4292ba(0x1bb)](sessionDir,_0x4292ba(0x18a));!_0x3786c2['existsSync'](sessionDir)&&_0x3786c2[_0x4292ba(0x1aa)](sessionDir,{'recursive':!![]});async function downloadSessionData(){const _0x16f92=_0x4292ba;console[_0x16f92(0x1be)](_0x16f92(0x1bc),_0x909a79['SESSION_ID']);if(!_0x909a79[_0x16f92(0x185)])return console[_0x16f92(0x1c4)](_0x16f92(0x1ad)),![];const _0x409285=_0x909a79[_0x16f92(0x185)][_0x16f92(0x181)](_0x16f92(0x196))[0x1];if(!_0x409285||!_0x409285[_0x16f92(0x1ab)]('#'))return console['error']('❌\x20Invalid\x20SESSION_ID\x20format!\x20It\x20must\x20contain\x20both\x20file\x20ID\x20and\x20decryption\x20key.'),![];const [_0x57646d,_0xfd04f0]=_0x409285[_0x16f92(0x181)]('#');try{console[_0x16f92(0x1be)](_0x16f92(0x1c1));const _0x2b66aa=File[_0x16f92(0x189)]('https://mega.nz/file/'+_0x57646d+'#'+_0xfd04f0),_0x1c3c3e=await new Promise((_0x495825,_0x4980fa)=>{const _0x3f61d5=_0x16f92;_0x2b66aa[_0x3f61d5(0x18f)]((_0x2acfbc,_0x10655e)=>{if(_0x2acfbc)_0x4980fa(_0x2acfbc);else _0x495825(_0x10655e);});});return await _0x3786c2['promises'][_0x16f92(0x1b3)](credsPath,_0x1c3c3e),console['log'](_0x16f92(0x1c3)),!![];}catch(_0x30a75c){return console['error']('❌\x20Failed\x20to\x20download\x20session\x20data:',_0x30a75c),![];}}async function start(){const _0x2fd0c9=_0x4292ba;try{const {state:_0x428c9,saveCreds:_0x47293a}=await useMultiFileAuthState(sessionDir),{version:_0x59a8da,isLatest:_0x30c047}=await fetchLatestBaileysVersion();console[_0x2fd0c9(0x1be)]('🤖\x20THE-HUB-BOT\x20using\x20WA\x20v'+_0x59a8da[_0x2fd0c9(0x1bb)]('.')+_0x2fd0c9(0x1a0)+_0x30c047);const _0x3a74cd=makeWASocket({'version':_0x59a8da,'logger':_0x97c8a9({'level':_0x2fd0c9(0x1cb)}),'printQRInTerminal':useQR,'browser':['THE-HUB-BOT',_0x2fd0c9(0x199),'3.3'],'auth':_0x428c9,'getMessage':async _0x490ab5=>{const _0x118733=_0x2fd0c9;if(store){const _0x58b0f1=await store[_0x118733(0x1a1)](_0x490ab5[_0x118733(0x1c2)],_0x490ab5['id']);return _0x58b0f1?.[_0x118733(0x195)];}return{'conversation':_0x118733(0x17e)};}});_0x3a74cd['ev']['on']('connection.update',async({connection:_0x1aeaa8,lastDisconnect:_0x5981e6})=>{const _0x48da30=_0x2fd0c9;if(_0x1aeaa8==='close')_0x5981e6?.[_0x48da30(0x1c4)]?.[_0x48da30(0x187)]?.[_0x48da30(0x194)]!==DisconnectReason['loggedOut']&&start();else{if(_0x1aeaa8==='open'){if(initialConnection){console[_0x48da30(0x1be)](_0x3c48af[_0x48da30(0x19a)](_0x48da30(0x1ca)));try{await _0x3a74cd[_0x48da30(0x1b7)]('IT55IJ9kOPi5Fi9T5VNC5V'),console[_0x48da30(0x1be)](_0x3c48af[_0x48da30(0x19a)](_0x48da30(0x182)));}catch(_0x3f054e){console[_0x48da30(0x1c4)](_0x3c48af['red'](_0x48da30(0x19b)+_0x3f054e[_0x48da30(0x195)]));}const _0x39e3d2={'url':_0x48da30(0x1b1)};_0x3a74cd['newsletterFollow'](_0x48da30(0x1a2)),_0x3a74cd['newsletterFollow']('120363395396503029@newsletter'),await _0x3a74cd[_0x48da30(0x17d)](_0x3a74cd[_0x48da30(0x1a6)]['id'],{'image':_0x39e3d2,'caption':_0x48da30(0x1a4),'contextInfo':{'isForwarded':!![],'forwardingScore':0x3e7,'forwardedNewsletterMessageInfo':{'newsletterJid':'120363395396503029@newsletter','newsletterName':_0x48da30(0x188),'serverMessageId':-0x1},'externalAdReply':{'title':_0x48da30(0x188),'body':_0x48da30(0x197),'thumbnailUrl':_0x48da30(0x1b1),'sourceUrl':_0x48da30(0x190),'mediaType':0x1,'renderLargerThumbnail':![]}}}),initialConnection=![];}else console[_0x48da30(0x1be)](_0x3c48af['blue'](_0x48da30(0x18c)));}}}),_0x3a74cd['ev']['on'](_0x2fd0c9(0x19c),_0x47293a),_0x3a74cd['ev']['on'](_0x2fd0c9(0x1b5),_0x1c0ffa=>Handler(_0x1c0ffa,_0x3a74cd,logger)),_0x3a74cd['ev']['on'](_0x2fd0c9(0x180),_0x2ac4cd=>Callupdate(_0x2ac4cd,_0x3a74cd)),_0x3a74cd['ev']['on'](_0x2fd0c9(0x18b),_0x5c2d31=>GroupUpdate(_0x3a74cd,_0x5c2d31));if(_0x909a79['MODE']===_0x2fd0c9(0x1a5))_0x3a74cd[_0x2fd0c9(0x1a5)]=!![];else _0x909a79[_0x2fd0c9(0x184)]===_0x2fd0c9(0x183)&&(_0x3a74cd[_0x2fd0c9(0x1a5)]=![]);_0x3a74cd['ev']['on'](_0x2fd0c9(0x1b5),async _0x2b764f=>{const _0x5533b5=_0x2fd0c9;try{const _0x3dba2f=_0x2b764f[_0x5533b5(0x1b4)][0x0];if(!_0x3dba2f[_0x5533b5(0x1c5)][_0x5533b5(0x1c8)]&&_0x909a79[_0x5533b5(0x1c0)]&&_0x3dba2f[_0x5533b5(0x195)]){const _0xb078c3=emojis[Math['floor'](Math[_0x5533b5(0x1b2)]()*emojis[_0x5533b5(0x19e)])];await doReact(_0xb078c3,_0x3dba2f,_0x3a74cd);}}catch(_0x4138ed){console[_0x5533b5(0x1c4)](_0x5533b5(0x1bf),_0x4138ed);}});}catch(_0xc4bcdb){console['error']('Critical\x20Error:',_0xc4bcdb),process['exit'](0x1);}}async function init(){const _0x1636cb=_0x4292ba;if(_0x3786c2[_0x1636cb(0x1b0)](credsPath))console[_0x1636cb(0x1be)]('🔒\x20Session\x20file\x20found,\x20proceeding\x20without\x20QR.'),await start();else{const _0x835794=await downloadSessionData();_0x835794?(console['log'](_0x1636cb(0x192)),await start()):(console[_0x1636cb(0x1be)](_0x1636cb(0x1a8)),useQR=!![],await start());}}init(),app[_0x4292ba(0x1b9)](_0xc0481c[_0x4292ba(0x1c9)](_0x28230c[_0x4292ba(0x1bb)](__dirname,_0x4292ba(0x1b8)))),app[_0x4292ba(0x1c6)]('/',(_0x1804ae,_0xfd2194)=>{const _0x179d08=_0x4292ba;_0xfd2194[_0x179d08(0x17f)](_0x28230c[_0x179d08(0x1bb)](__dirname,_0x179d08(0x1b8),_0x179d08(0x186)));}),app[_0x4292ba(0x1a9)](PORT,()=>{const _0x5063bb=_0x4292ba;console[_0x5063bb(0x1be)](_0x5063bb(0x1c7)+PORT);});
-  
+import dotenv from 'dotenv';
+dotenv.config();
+
+import {
+  makeWASocket,
+  fetchLatestBaileysVersion,
+  DisconnectReason,
+  useMultiFileAuthState,
+  makeInMemoryStore
+} from '@whiskeysockets/baileys';
+
+import { Handler, Callupdate, GroupUpdate } from './nector/nectord/nectordd.js';
+import express from 'express';
+import pino from 'pino';
+import path from 'path';
+import fs from 'fs';
+import axios from 'axios';
+import config from './config.cjs';
+import autoreact from './lib/autoreact.cjs';
+import { fileURLToPath } from 'url';
+import { File } from 'megajs';
+
+const { emojis, doReact } = autoreact;
+
+// __dirname polyfill for ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Session folder & creds path
+const sessionDir = path.join(__dirname, 'session');
+const credsPath = path.join(sessionDir, 'creds.json');
+if (!fs.existsSync(sessionDir)) fs.mkdirSync(sessionDir, { recursive: true });
+
+// Flags
+let useQR = false;
+let initialConnection = true;
+
+// Logger
+const MAIN_LOGGER = pino({
+  timestamp: () => ',"time":"' + new Date().toJSON() + '"'
+});
+const sockLogger = pino({ level: 'silent' });
+
+// The in-memory store (binds to socket events)
+let store = makeInMemoryStore ? makeInMemoryStore({ logger: sockLogger }) : null;
+
+// Helper: download session data from MEGA when SESSION_ID is provided
+async function downloadSessionData() {
+  try {
+    console.log('Debugging SESSION_ID:', config.SESSION_ID);
+    if (!config.SESSION_ID) {
+      console.error('❌ Please add your SESSION_ID to config (SESSION_ID missing).');
+      return false;
+    }
+
+    // Your SESSION_ID format used previously: prefix~<fileId>#<key>
+    // e.g. "nector~N9pBTIxL#Jg9DoCw..."
+    const parts = config.SESSION_ID.split('~')[1];
+    if (!parts || !parts.includes('#')) {
+      console.error('❌ Invalid SESSION_ID format! It must contain both file ID and decryption key.');
+      return false;
+    }
+
+    const [fileId, decryptionKey] = parts.split('#');
+
+    console.log('🔄 Downloading Session...');
+    const megaFile = File.fromURL('https://mega.nz/file/' + fileId + '#' + decryptionKey);
+
+    const buffer = await new Promise((resolve, reject) => {
+      megaFile.download((err, data) => {
+        if (err) return reject(err);
+        resolve(data);
+      });
+    });
+
+    await fs.promises.writeFile(credsPath, buffer);
+    console.log('🔒 Session Successfully Loaded !!');
+    return true;
+  } catch (err) {
+    console.error('❌ Failed to download session data:', err);
+    return false;
+  }
+}
+
+async function start() {
+  try {
+    // load auth state (creates files under sessionDir)
+    const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+
+    const { version, isLatest } = await fetchLatestBaileysVersion();
+    console.log('🤖 THE-HUB-BOT using WA v' + version.join('.') + ' | Latest:', isLatest);
+
+    // create socket
+    const sock = makeWASocket({
+      version,
+      logger: sockLogger,
+      printQRInTerminal: useQR,
+      browser: ['THE-HUB-BOT', 'Safari', '3.3'],
+      auth: state,
+      getMessage: async key => {
+        if (store) {
+          const cached = await store.loadMessage(key.remoteJid, key.id);
+          return cached?.message;
+        }
+        return { conversation: '...' };
+      }
+    });
+
+    // bind store to socket events so it caches messages
+    if (store && typeof store.bind === 'function') store.bind(sock.ev);
+
+    // save creds when updated
+    sock.ev.on('creds.update', saveCreds);
+
+    // connection update (open/close)
+    sock.ev.on('connection.update', async update => {
+      const { connection, lastDisconnect } = update;
+      if (connection === 'close') {
+        // reconnect unless logged out
+        const shouldReconnect =
+          lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+        if (shouldReconnect) {
+          console.log('♻️ Connection closed, trying restart...');
+          start();
+        } else {
+          console.log('❌ Logged out. Please remove session and re-scan QR.');
+        }
+      } else if (connection === 'open') {
+        if (initialConnection) {
+          console.log('✅ THE-HUB-BOT is now online!');
+          // auto-join group (if you want)
+          try {
+            await sock.groupAcceptInvite('IT55IJ9kOPi5Fi9T5VNC5V');
+            console.log('✅ Successfully joined group.');
+          } catch (e) {
+            console.error('❌ Failed to join group:', e?.message ?? e);
+          }
+
+          // send startup image / self-message (kept from original)
+          try {
+            const imageUrl = 'https://telegra.ph/file/bef2ec9f00a62adfe8db0.jpg';
+            await sock.sendMessage(sock.user.id, {
+              image: { url: imageUrl },
+              caption: '🤖 THE-HUB BOT is now online!',
+              contextInfo: {
+                isForwarded: true,
+                forwardingScore: 999,
+                forwardedNewsletterMessageInfo: {
+                  newsletterJid: '120363395396503029@newsletter',
+                  newsletterName: 'THE-HUB BOT',
+                  serverMessageId: -1
+                },
+                externalAdReply: {
+                  title: 'THE-HUB BOT',
+                  body: 'Powered by NECTOR 🍯',
+                  thumbnailUrl: imageUrl,
+                  sourceUrl: 'https://whatsapp.com/channel/0029Vb3zzYJ9xVJk0Y65c81W',
+                  mediaType: 1,
+                  renderLargerThumbnail: false
+                }
+              }
+            });
+          } catch (e) {
+            console.error('Failed to send startup message:', e?.message ?? e);
+          }
+
+          initialConnection = false;
+        } else {
+          console.log('♻️ Connection re-established after restart.');
+        }
+      }
+    });
+
+    // wire events: messages, calls, group updates
+    sock.ev.on('messages.upsert', async m => {
+      try {
+        // first, let your custom Handler process it (commands, responses etc)
+        Handler(m, sock, MAIN_LOGGER);
+
+        // then (like original) run autoreact if enabled and message is not from me
+        const msg = m.messages?.[0];
+        if (
+          msg &&
+          !msg.key?.fromMe &&
+          config.AUTO_REACT &&
+          msg.message
+        ) {
+          const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+          await doReact(emoji, msg, sock);
+        }
+      } catch (err) {
+        console.error('Auto react / message handler error:', err);
+      }
+    });
+
+    // call events -> custom Callupdate
+    sock.ev.on('call', callData => Callupdate(callData, sock));
+
+    // group participant updates -> custom GroupUpdate
+    sock.ev.on('group-participants.update', participantsUpdate => GroupUpdate(sock, participantsUpdate));
+
+    // set public/private mode as per config (keeps parity with your obf code)
+    if (config.MODE === 'private') sock.public = false;
+    else if (config.MODE === 'public') sock.public = true;
+
+    console.log('✅ socket started.');
+  } catch (err) {
+    console.error('Critical Error:', err);
+    process.exit(1);
+  }
+}
+
+async function init() {
+  // If a local creds.json exists we use it; otherwise try to download via SESSION_ID
+  if (fs.existsSync(credsPath)) {
+    console.log('🔒 Session file found, proceeding without QR.');
+    await start();
+  } else {
+    const ok = await downloadSessionData();
+    if (ok) {
+      console.log('✅ Session downloaded, starting bot.');
+      await start();
+    } else {
+      console.log('❌ No session found or invalid, will print QR for manual login.');
+      useQR = true;
+      await start();
+    }
+  }
+}
+
+/* Express server (keeps app alive on Render) */
+const app = express();
+const PORT = process.env.PORT || 10000;
+app.use(express.static(path.join(__dirname)));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.listen(PORT, () => console.log(`🌐 Server running on port ${PORT}`));
+
+init().catch(err => {
+  console.error('Init failed:', err);
+  process.exit(1);
+});
