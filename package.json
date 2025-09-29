@@ -1,14 +1,14 @@
 {
 "name": "THE-HUB-BOT",
-"version": "2.1.0",
+"version": "2.1.1",
 "description": "Better than before",
 "main": "index.js",
-"type": "commonjs",
+"type": "module",
 "scripts": {
 "start": "node index.js"
 },
 "engines": {
-"node": "23.x"
+"node": "20.x"
 },
 "keywords": [
 "NECTOR-SRT",
@@ -18,7 +18,7 @@
 "author": "NECTOR 🍯",
 "license": "ISC",
 "dependencies": {
-"@adiwajshing/baileys": "npm:@whiskeysockets/baileys@^7.0.0-rc.3",
+"@whiskeysockets/baileys": "^7.0.0-rc.3",
 "@ffmpeg-installer/ffmpeg": "^1.1.0",
 "@google/generative-ai": "^0.9.0",
 "@hapi/boom": "^10.0.1",
