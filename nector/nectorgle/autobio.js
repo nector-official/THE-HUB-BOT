@@ -28,27 +28,29 @@ const getRandomQuote = async () => {
     }
   }
 
+  // fallback to local quotes
   return quotes[Math.floor(Math.random() * quotes.length)];
 };
 
 const startAutoBio = (Matrix) => {
-  if (autobioInterval) return;
+  if (autobioInterval) return; // already running
 
-  console.log("[AutoBio] Auto Bio started automatically.");
+  console.log("📝 [AutoBio] Started.");
   autobioInterval = setInterval(async () => {
     const quote = await getRandomQuote();
     try {
       await Matrix.updateProfileStatus(quote);
-      console.log(`[AutoBio] Bio updated to: ${quote}`);
+      console.log(`📝 [AutoBio] Bio updated to: ${quote}`);
     } catch (err) {
       console.error("[AutoBio Error]", err.message);
     }
-  }, 19 * 1000);
+  }, 19 * 1000); // update every 19s
 };
 
 const stopAutoBio = () => {
   if (autobioInterval) clearInterval(autobioInterval);
   autobioInterval = null;
+  console.log("🛑 [AutoBio] Stopped.");
 };
 
 const autobioCommand = async (m, Matrix) => {
@@ -60,7 +62,9 @@ const autobioCommand = async (m, Matrix) => {
   if (command !== "autobio") return;
 
   if (!["on", "off"].includes(arg)) {
-    return m.reply("🔁 *Usage:*\n\n`autobio on` - Start auto bio\n`autobio off` - Stop auto bio");
+    return m.reply(
+      "🔁 *Usage:*\n\n`autobio on` - Start auto bio\n`autobio off` - Stop auto bio"
+    );
   }
 
   if (arg === "on") {
