@@ -5,7 +5,6 @@ const tip = async (m, sock) => {
     const prefix = "!";
     const text = m.body?.trim() || "";
 
-    // Only trigger on !tip
     if (!text.startsWith(prefix)) return;
     const cmd = text.slice(prefix.length).split(" ")[0].toLowerCase();
     if (cmd !== "tip") return;
@@ -18,7 +17,7 @@ const tip = async (m, sock) => {
       }, { quoted: m });
     }
 
-    const [teamA, teamB] = args.split(" vs ").map(t => t.trim());
+    const [teamAName, teamBName] = args.split(" vs ").map(t => t.trim());
 
     await m.React("⏳");
 
@@ -26,13 +25,32 @@ const tip = async (m, sock) => {
     const API_KEY = "a3f7d73d569de1d62fb8147005347f79";
     const API_URL = "https://v3.football.api-sports.io";
 
-    let matches = [];
+    // Helper: get team ID
+    const getTeamId = async (teamName) => {
+      const res = await axios.get(`${API_URL}/teams`, {
+        headers: { "x-apisports-key": API_KEY },
+        params: { search: teamName }
+      });
+      return res.data?.response?.[0]?.team?.id || null;
+    };
+
+    const teamAId = await getTeamId(teamAName);
+    const teamBId = await getTeamId(teamBName);
+
+    if (!teamAId || !teamBId) {
+      return await sock.sendMessage(m.from, {
+        text: `❌ Could not find both teams. (*${teamAName}*, *${teamBName}*)`
+      }, { quoted: m });
+    }
 
     // 1. Try Head-to-Head
+    let matches = [];
+    let source = "Head-to-Head";
+
     try {
       const h2hRes = await axios.get(`${API_URL}/fixtures/headtohead`, {
         headers: { "x-apisports-key": API_KEY },
-        params: { h2h: `${teamA}-${teamB}` }
+        params: { h2h: `${teamAId}-${teamBId}` }
       });
 
       if (h2hRes.data?.response?.length > 0) {
@@ -42,30 +60,9 @@ const tip = async (m, sock) => {
       console.error("[H2H ERROR]", err.response?.data || err.message);
     }
 
-    // 2. If no H2H, fallback to each team’s last 5
-    let source = "H2H";
+    // 2. Fallback: last 5 matches per team
     if (matches.length === 0) {
       source = "Recent Form";
-
-      const getTeamId = async (teamName) => {
-        const res = await axios.get(`${API_URL}/teams`, {
-          headers: { "x-apisports-key": API_KEY },
-          params: { search: teamName }
-        });
-        if (res.data?.response?.length > 0) {
-          return res.data.response[0].team.id;
-        }
-        return null;
-      };
-
-      const teamAId = await getTeamId(teamA);
-      const teamBId = await getTeamId(teamB);
-
-      if (!teamAId || !teamBId) {
-        return await sock.sendMessage(m.from, {
-          text: `❌ Could not find team IDs for *${teamA}* or *${teamB}*.`
-        }, { quoted: m });
-      }
 
       const getLastMatches = async (teamId) => {
         const res = await axios.get(`${API_URL}/fixtures`, {
@@ -77,26 +74,36 @@ const tip = async (m, sock) => {
 
       const lastA = await getLastMatches(teamAId);
       const lastB = await getLastMatches(teamBId);
-
       matches = [...lastA, ...lastB];
     }
 
     if (matches.length === 0) {
       return await sock.sendMessage(m.from, {
-        text: `⚠️ No data available for *${teamA}* vs *${teamB}*.`
+        text: `⚠️ No data available for *${teamAName}* vs *${teamBName}*.`
       }, { quoted: m });
     }
 
     // Analysis
-    let homeWins = 0, awayWins = 0, draws = 0, btts = 0, totalGoals = 0;
+    let teamAWins = 0, teamBWins = 0, draws = 0, btts = 0, totalGoals = 0;
 
     matches.forEach(match => {
       const goalsHome = match.goals?.home ?? 0;
       const goalsAway = match.goals?.away ?? 0;
       totalGoals += goalsHome + goalsAway;
-      if (goalsHome > goalsAway) homeWins++;
-      else if (goalsAway > goalsHome) awayWins++;
-      else draws++;
+
+      const homeName = match.teams?.home?.name || "";
+      const awayName = match.teams?.away?.name || "";
+
+      if (goalsHome > goalsAway) {
+        if (homeName.toLowerCase().includes(teamAName.toLowerCase())) teamAWins++;
+        else teamBWins++;
+      } else if (goalsAway > goalsHome) {
+        if (awayName.toLowerCase().includes(teamAName.toLowerCase())) teamAWins++;
+        else teamBWins++;
+      } else {
+        draws++;
+      }
+
       if (goalsHome > 0 && goalsAway > 0) btts++;
     });
 
@@ -104,13 +111,13 @@ const tip = async (m, sock) => {
     const avgGoals = (totalGoals / total).toFixed(2);
 
     const message = `
-📊 *Prediction: ${teamA} vs ${teamB}*
+📊 *Prediction: ${teamAName} vs ${teamBName}*
 
 📌 Based on: ${source}
 
 🟢 Win %:
-- ${teamA}: ${(homeWins / total * 100).toFixed(1)}%
-- ${teamB}: ${(awayWins / total * 100).toFixed(1)}%
+- ${teamAName}: ${(teamAWins / total * 100).toFixed(1)}%
+- ${teamBName}: ${(teamBWins / total * 100).toFixed(1)}%
 - Draw: ${(draws / total * 100).toFixed(1)}%
 
 ⚽ Both Teams to Score (BTTS): ${(btts / total * 100).toFixed(1)}%
@@ -120,7 +127,7 @@ const tip = async (m, sock) => {
 - Tight: 1-1
 - Open: 2-1 / 1-2
 
-💡 *Note:* Stats calculated from last ${total} matches.
+💡 *Note:* Stats from last ${total} matches.
     `.trim();
 
     await sock.sendMessage(m.from, { text: message }, { quoted: m });
