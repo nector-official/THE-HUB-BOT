@@ -76,7 +76,7 @@ async function tryFlashScores(teamA, teamB) {
         // Using FlashScores API (public data)
         const response = await axios.get('https://flashscore.p.rapidapi.com/v2/search', {
             headers: {
-                'X-RapidAPI-Key': 'your_rapidapi_key', // Get from rapidapi.com
+                'X-RapidAPI-Key': 'e658dc14f8mshae0c2d62c238ca6p17e0a3jsn486c7a7dafae', // Get from rapidapi.com
                 'X-RapidAPI-Host': 'flashscore.p.rapidapi.com'
             },
             params: {
@@ -105,7 +105,7 @@ async function trySofaScore(teamA, teamB) {
     try {
         const response = await axios.get(`https://sofa-score.p.rapidapi.com/v1/search`, {
             headers: {
-                'X-RapidAPI-Key': 'your_rapidapi_key',
+                'X-RapidAPI-Key': 'e658dc14f8mshae0c2d62c238ca6p17e0a3jsn486c7a7dafae',
                 'X-RapidAPI-Host': 'sofa-score.p.rapidapi.com'
             },
             params: {
@@ -129,7 +129,7 @@ async function tryLiveScore(teamA, teamB) {
     try {
         const response = await axios.get(`https://livescore-api.p.rapidapi.com/v2/search`, {
             headers: {
-                'X-RapidAPI-Key': 'your_rapidapi_key',
+                'X-RapidAPI-Key': 'e658dc14f8mshae0c2d62c238ca6p17e0a3jsn486c7a7dafae',
                 'X-RapidAPI-Host': 'livescore-api.p.rapidapi.com'
             },
             params: {
@@ -154,7 +154,7 @@ async function getRecentFormStats(teamA, teamB) {
         // Use Football-Data.org for recent stats
         const response = await axios.get('https://api.football-data.org/v4/competitions/PL/matches', {
             headers: {
-                'X-Auth-Token': 'your_football_data_key' // Get from football-data.org
+                'X-Auth-Token': '578d0a840ee047d5a5a7da7410c94bc4' // Get from football-data.org
             },
             params: {
                 status: 'FINISHED',
