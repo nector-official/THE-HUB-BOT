@@ -1,140 +1,136 @@
-import config from "../../config.cjs";
 import axios from "axios";
 
 const tip = async (m, sock) => {
-  const prefix = config.PREFIX || "!";
-  const text = m.body || m.text || "";
-  const cmd = text.startsWith(prefix)
-    ? text.slice(prefix.length).split(" ")[0].toLowerCase()
-    : "";
-  const args = text.slice(prefix.length + cmd.length).trim();
-
-  if (cmd !== "tip") return;
-
-  if (!args.includes("vs")) {
-    return await sock.sendMessage(m.from, {
-      text: `❌ Please provide two teams.\n💡 Example: *${prefix}tip Arsenal vs Chelsea*`
-    }, { quoted: m });
-  }
-
-  await m.React("⚽");
-
   try {
-    // 🔑 Your API-Football key
-    const API_KEY = "a3f7d73d569de1d62fb8147005347f79";
-    const headers = { "x-apisports-key": API_KEY };
+    const prefix = "!";
+    const text = m.body?.trim() || "";
 
-    const [teamAName, teamBName] = args.split("vs").map(s => s.trim());
+    // Only trigger on !tip
+    if (!text.startsWith(prefix)) return;
+    const cmd = text.slice(prefix.length).split(" ")[0].toLowerCase();
+    if (cmd !== "tip") return;
 
-    // 🔎 Search team
-    const searchTeam = async (name) => {
-      const res = await axios.get(
-        `https://v3.football.api-sports.io/teams?search=${encodeURIComponent(name)}`,
-        { headers }
-      );
-      return res.data.response[0]?.team || null;
-    };
-
-    const teamA = await searchTeam(teamAName);
-    const teamB = await searchTeam(teamBName);
-
-    if (!teamA || !teamB) {
+    // Extract teams
+    const args = text.slice(prefix.length + cmd.length).trim();
+    if (!args.includes(" vs ")) {
       return await sock.sendMessage(m.from, {
-        text: `❌ Could not find both teams.\n\nTeam A: ${teamAName}\nTeam B: ${teamBName}`
+        text: "❌ Format: *!tip TeamA vs TeamB*"
       }, { quoted: m });
     }
 
-    // 🕒 Last matches
-    const fetchLastMatches = async (teamId) => {
-      const res = await axios.get(
-        `https://v3.football.api-sports.io/fixtures?team=${teamId}&last=5`,
-        { headers }
-      );
-      return res.data.response || [];
-    };
+    const [teamA, teamB] = args.split(" vs ").map(t => t.trim());
 
-    const lastA = await fetchLastMatches(teamA.id);
-    const lastB = await fetchLastMatches(teamB.id);
+    await m.React("⏳");
 
-    // ⚔️ H2H
-    const h2hRes = await axios.get(
-      `https://v3.football.api-sports.io/fixtures/headtohead?h2h=${teamA.id}-${teamB.id}&last=5`,
-      { headers }
-    );
-    const h2hMatches = h2hRes.data.response || [];
+    // API-Football settings
+    const API_KEY = "a3f7d73d569de1d62fb8147005347f79";
+    const API_URL = "https://v3.football.api-sports.io";
 
-    // 🔍 Stats
-    const form = (matches, teamId) => {
-      let wins = 0, draws = 0, losses = 0, goalsFor = 0, goalsAgainst = 0;
-      matches.forEach(m => {
-        const home = m.teams.home.id === teamId;
-        const gf = home ? m.goals.home : m.goals.away;
-        const ga = home ? m.goals.away : m.goals.home;
-        goalsFor += gf;
-        goalsAgainst += ga;
-        if (gf > ga) wins++;
-        else if (gf === ga) draws++;
-        else losses++;
+    let matches = [];
+
+    // 1. Try Head-to-Head
+    try {
+      const h2hRes = await axios.get(`${API_URL}/fixtures/headtohead`, {
+        headers: { "x-apisports-key": API_KEY },
+        params: { h2h: `${teamA}-${teamB}` }
       });
-      return { wins, draws, losses, goalsFor, goalsAgainst };
-    };
 
-    const statsA = form(lastA, teamA.id);
-    const statsB = form(lastB, teamB.id);
+      if (h2hRes.data?.response?.length > 0) {
+        matches = h2hRes.data.response.slice(0, 5);
+      }
+    } catch (err) {
+      console.error("[H2H ERROR]", err.response?.data || err.message);
+    }
 
-    const totalGames =
-      (statsA.wins + statsA.draws + statsA.losses +
-        statsB.wins + statsB.draws + statsB.losses) || 1;
+    // 2. If no H2H, fallback to each team’s last 5
+    let source = "H2H";
+    if (matches.length === 0) {
+      source = "Recent Form";
 
-    const winAProb = ((statsA.wins + statsB.losses) / totalGames) * 100;
-    const winBProb = ((statsB.wins + statsA.losses) / totalGames) * 100;
-    const drawProb = ((statsA.draws + statsB.draws) / totalGames) * 50;
+      const getTeamId = async (teamName) => {
+        const res = await axios.get(`${API_URL}/teams`, {
+          headers: { "x-apisports-key": API_KEY },
+          params: { search: teamName }
+        });
+        if (res.data?.response?.length > 0) {
+          return res.data.response[0].team.id;
+        }
+        return null;
+      };
 
-    const bttsCount = h2hMatches.filter(
-      m => m.goals.home > 0 && m.goals.away > 0
-    ).length;
-    const bttsProb = (bttsCount / (h2hMatches.length || 1)) * 100;
+      const teamAId = await getTeamId(teamA);
+      const teamBId = await getTeamId(teamB);
 
-    const over25Count = h2hMatches.filter(
-      m => (m.goals.home + m.goals.away) > 2
-    ).length;
-    const over25Prob = (over25Count / (h2hMatches.length || 1)) * 100;
+      if (!teamAId || !teamBId) {
+        return await sock.sendMessage(m.from, {
+          text: `❌ Could not find team IDs for *${teamA}* or *${teamB}*.`
+        }, { quoted: m });
+      }
 
-    const avgGoalsA = (statsA.goalsFor / 5).toFixed(1);
-    const avgGoalsB = (statsB.goalsFor / 5).toFixed(1);
-    const likelyScore = `${Math.round(avgGoalsA)}-${Math.round(avgGoalsB)}`;
+      const getLastMatches = async (teamId) => {
+        const res = await axios.get(`${API_URL}/fixtures`, {
+          headers: { "x-apisports-key": API_KEY },
+          params: { team: teamId, last: 5 }
+        });
+        return res.data?.response || [];
+      };
 
-    // 📩 Final message
-    let message = `📊 *Match Prediction*\n\n`;
-    message += `⚔️ ${teamA.name} vs ${teamB.name}\n\n`;
-    message += `📈 *Win Probabilities:*\n`;
-    message += `• ${teamA.name}: ${winAProb.toFixed(1)}%\n`;
-    message += `• Draw: ${drawProb.toFixed(1)}%\n`;
-    message += `• ${teamB.name}: ${winBProb.toFixed(1)}%\n\n`;
-    message += `🎯 *Special Markets:*\n`;
-    message += `• Both Teams To Score: ${bttsProb.toFixed(1)}%\n`;
-    message += `• Over 2.5 Goals: ${over25Prob.toFixed(1)}%\n\n`;
-    message += `🔮 *Likely Correct Score:* ${likelyScore}`;
+      const lastA = await getLastMatches(teamAId);
+      const lastB = await getLastMatches(teamBId);
+
+      matches = [...lastA, ...lastB];
+    }
+
+    if (matches.length === 0) {
+      return await sock.sendMessage(m.from, {
+        text: `⚠️ No data available for *${teamA}* vs *${teamB}*.`
+      }, { quoted: m });
+    }
+
+    // Analysis
+    let homeWins = 0, awayWins = 0, draws = 0, btts = 0, totalGoals = 0;
+
+    matches.forEach(match => {
+      const goalsHome = match.goals?.home ?? 0;
+      const goalsAway = match.goals?.away ?? 0;
+      totalGoals += goalsHome + goalsAway;
+      if (goalsHome > goalsAway) homeWins++;
+      else if (goalsAway > goalsHome) awayWins++;
+      else draws++;
+      if (goalsHome > 0 && goalsAway > 0) btts++;
+    });
+
+    const total = matches.length;
+    const avgGoals = (totalGoals / total).toFixed(2);
+
+    const message = `
+📊 *Prediction: ${teamA} vs ${teamB}*
+
+📌 Based on: ${source}
+
+🟢 Win %:
+- ${teamA}: ${(homeWins / total * 100).toFixed(1)}%
+- ${teamB}: ${(awayWins / total * 100).toFixed(1)}%
+- Draw: ${(draws / total * 100).toFixed(1)}%
+
+⚽ Both Teams to Score (BTTS): ${(btts / total * 100).toFixed(1)}%
+📈 Average Goals: ${avgGoals}
+
+🎯 Possible Correct Score:
+- Tight: 1-1
+- Open: 2-1 / 1-2
+
+💡 *Note:* Stats calculated from last ${total} matches.
+    `.trim();
 
     await sock.sendMessage(m.from, { text: message }, { quoted: m });
     await m.React("✅");
 
   } catch (err) {
-    console.error("[Tip Command Error]", err.response?.data || err.message);
-    await sock.sendMessage(m.from, { text: "⚠️ Could not fetch analysis (API error or limit)." }, { quoted: m });
-    await m.React("⚠️");
-  }
-};
-
-export default tip;
-    message += `🔮 *Likely Correct Score:* ${likelyScore}`;
-
-    await sock.sendMessage(m.from, { text: message }, { quoted: m });
-    await m.React("✅");
-
-  } catch (err) {
-    console.error("[Tip Command Error]", err.response?.data || err.message);
-    await sock.sendMessage(m.from, { text: "⚠️ Could not fetch analysis (API error or limit)." }, { quoted: m });
+    console.error("[TIP ERROR]", err.response?.data || err.message);
+    await sock.sendMessage(m.from, {
+      text: "⚠️ Could not fetch analysis (API error or key issue)."
+    }, { quoted: m });
     await m.React("⚠️");
   }
 };
