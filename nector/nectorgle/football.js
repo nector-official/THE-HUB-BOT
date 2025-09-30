@@ -18,9 +18,10 @@ const football = async (m, sock) => {
     return;
   }
 
+  // Map league codes to API endpoints
   const leagueMap = {
     PL: "PL",
-    CL: "UCL",
+    CL: "CL",
     WC: "WC",
     BL1: "BL1",
     DED: "DED",
@@ -33,8 +34,8 @@ const football = async (m, sock) => {
     SA: "SA"
   };
 
-  const apiCode = leagueMap[leagueCode];
-  if (!apiCode) {
+  const apiLeague = leagueMap[leagueCode];
+  if (!apiLeague) {
     await sock.sendMessage(m.from, { text: `❌ Unknown league code: ${leagueCode}` }, { quoted: m });
     return;
   }
@@ -42,73 +43,50 @@ const football = async (m, sock) => {
   await m.React("⚽");
 
   try {
-    const API_KEY = "578d0a840ee047d5a5a7da7410c94bc4";
+    const API_KEY = '578d0a840ee047d5a5a7da7410c94bc4';
 
-    // Current week: Sunday → Saturday
-    const now = new Date();
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday
-    startOfWeek.setHours(0, 0, 0, 0);
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(endOfWeek.getDate() + 6); // Saturday
-    endOfWeek.setHours(23, 59, 59, 999);
+    // Week range: today → 7 days later
+    const today = new Date();
+    const startDate = today.toISOString().split('T')[0];
+    const endDateObj = new Date();
+    endDateObj.setDate(today.getDate() + 7);
+    const endDate = endDateObj.toISOString().split('T')[0];
 
-    const url = `https://api.football-data.org/v4/matches`;
-    const { data } = await axios.get(url, {
-      headers: { "X-Auth-Token": API_KEY }
-    });
+    const url = `https://api.football-data.org/v4/competitions/${apiLeague}/matches?dateFrom=${startDate}&dateTo=${endDate}`;
+    const { data } = await axios.get(url, { headers: { 'X-Auth-Token': API_KEY } });
 
-    // Filter matches by league & week
-    const matches = data.matches.filter(match => {
-      const matchDate = new Date(match.utcDate);
-      return match.competition.code === apiCode && matchDate >= startOfWeek && matchDate <= endOfWeek;
-    });
-
-    if (!matches || matches.length === 0) {
-      await sock.sendMessage(m.from, {
-        text: `❌ *No matches found this week for league:* ${leagueCode}`
-      }, { quoted: m });
-      await m.React("❌");
-      return;
+    if (!data.matches || data.matches.length === 0) {
+      return await sock.sendMessage(m.from, { text: `⚠️ *No matches found this week for league:* ${leagueCode}` }, { quoted: m });
     }
 
-    // Nairobi timezone
-    const timezoneOffset = 3; // UTC+3
+    // Nairobi timezone (UTC+3)
+    const timezoneOffset = 3; // hours
     const daysMap = {};
 
     // Group matches by day
-    matches.forEach(match => {
+    data.matches.forEach(match => {
       const dateUTC = new Date(match.utcDate);
       const dateLocal = new Date(dateUTC.getTime() + timezoneOffset * 60 * 60 * 1000);
       const weekday = dateLocal.toLocaleDateString('en-GB', { weekday: 'long' });
       const dateStr = dateLocal.toISOString().replace("T", " ").slice(0, 16);
-
       const matchText = `⚔️ *${match.homeTeam.name} vs ${match.awayTeam.name}*\n🕒 ${dateStr} (Nairobi Time)\n🏟️ ${match.venue || "N/A"}`;
 
-      if (daysMap[weekday]) {
-        daysMap[weekday].push(matchText);
-      } else {
-        daysMap[weekday] = [matchText];
-      }
+      if (daysMap[weekday]) daysMap[weekday].push(matchText);
+      else daysMap[weekday] = [matchText];
     });
 
     // Build message
-    let matchList = '';
+    let message = `📆 *Matches this week for ${leagueCode}:*\n\n`;
     for (const day of Object.keys(daysMap)) {
-      matchList += `📅 *${day}*\n${daysMap[day].join('\n')}\n\n`;
+      message += `📅 *${day}*\n${daysMap[day].join('\n')}\n\n`;
     }
 
-    await sock.sendMessage(m.from, {
-      text: `📆 *Matches this week for ${leagueCode}:*\n\n${matchList.trim()}`
-    }, { quoted: m });
-
+    await sock.sendMessage(m.from, { text: message.trim() }, { quoted: m });
     await m.React("✅");
 
-  } catch (error) {
-    console.error("[Football Command Error]", error.message);
-    await sock.sendMessage(m.from, {
-      text: `⚠️ *Could not fetch matches.*`
-    }, { quoted: m });
+  } catch (err) {
+    console.error("[Football Command Error]", err.response ? err.response.data : err.message);
+    await sock.sendMessage(m.from, { text: '⚠️ *Could not fetch matches.*' }, { quoted: m });
     await m.React("⚠️");
   }
 };
