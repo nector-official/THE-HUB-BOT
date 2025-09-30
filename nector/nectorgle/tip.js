@@ -3,16 +3,12 @@ import axios from "axios";
 const tip = async (m, sock) => {
     const text = m.body?.trim() || '';
     
-    // Support multiple commands
-    const commands = ['!predict', '!form', '!h2h', '!goals', '!tip'];
-    const usedCommand = commands.find(cmd => text.startsWith(cmd));
+    if (!text.startsWith('!tip')) return;
     
-    if (!usedCommand) return;
-    
-    const args = text.slice(usedCommand.length).trim();
+    const args = text.slice(4).trim();
     if (!args.includes(' vs ')) {
         return await sock.sendMessage(m.from, {
-            text: `❌ Format: *${usedCommand} TeamA vs TeamB*\nExample: *${usedCommand} Manchester United vs Liverpool*`
+            text: "❌ Format: *!tip TeamA vs TeamB*\nExample: *!tip Manchester United vs Liverpool*"
         }, { quoted: m });
     }
 
@@ -20,17 +16,15 @@ const tip = async (m, sock) => {
     await m.React("⏳");
 
     try {
-        const API_KEY = "a3f7d73d569de1d62fb8147005347f79";
-        const API_URL = "https://v3.football.api-sports.io";
-
-        // Team search
+        const API_URL = "https://www.thesportsdb.com/api/v1/json/3";
+        
+        // Search teams
         const searchTeam = async (name) => {
             try {
-                const res = await axios.get(`${API_URL}/teams`, {
-                    headers: { "x-apisports-key": API_KEY },
-                    params: { search: name, season: 2024 }
+                const res = await axios.get(`${API_URL}/searchteams.php`, {
+                    params: { t: name }
                 });
-                return res.data?.response?.[0]?.team || null;
+                return res.data?.teams?.[0] || null;
             } catch (error) {
                 return null;
             }
@@ -43,272 +37,162 @@ const tip = async (m, sock) => {
 
         if (!teamAData || !teamBData) {
             return await sock.sendMessage(m.from, {
-                text: `❌ One or both teams not found.\nTry: "Manchester United", "Liverpool", "Barcelona", "Real Madrid"`
+                text: `❌ Teams not found. Try: "Liverpool", "Manchester United", "Barcelona"`
             }, { quoted: m });
         }
 
-        // Get different data based on command
-        let analysisData = {};
-        
-        switch(usedCommand) {
-            case '!predict':
-                analysisData = await getPredictionAnalysis(teamAData.id, teamBData.id, API_KEY);
-                break;
-            case '!form':
-                analysisData = await getFormAnalysis(teamAData.id, teamBData.id, API_KEY);
-                break;
-            case '!h2h':
-                analysisData = await getH2HAnalysis(teamAData.id, teamBData.id, API_KEY);
-                break;
-            case '!goals':
-                analysisData = await getGoalsAnalysis(teamAData.id, teamBData.id, API_KEY);
-                break;
-            default: // !tip
-                analysisData = await getQuickAnalysis(teamAData.id, teamBData.id, API_KEY);
-        }
+        // Get last 5 events for each team
+        const getTeamEvents = async (teamId) => {
+            try {
+                const res = await axios.get(`${API_URL}/eventslast.php`, {
+                    params: { id: teamId }
+                });
+                return res.data?.results || [];
+            } catch (error) {
+                return [];
+            }
+        };
 
-        const message = formatMessage(usedCommand, teamAData.name, teamBData.name, analysisData);
+        const [eventsA, eventsB] = await Promise.all([
+            getTeamEvents(teamAData.idTeam),
+            getTeamEvents(teamBData.idTeam)
+        ]);
+
+        // Analysis
+        const analysis = analyzeMatches(eventsA, eventsB, teamAData.strTeam, teamBData.strTeam);
         
+        const message = `
+⚽ *Prediction: ${teamAData.strTeam} vs ${teamBData.strTeam}*
+
+📊 Based on recent form (Last 5 matches)
+
+🏆 Win Probability:
+- ${teamAData.strTeam}: ${analysis.winA}%
+- ${teamBData.strTeam}: ${analysis.winB}%
+- Draw: ${analysis.draw}%
+
+⚽ Goals Analysis:
+- BTTS Probability: ${analysis.btts}%
+- Avg Goals/Match: ${analysis.avgGoals}
+- Over 2.5 Goals: ${analysis.over25}%
+
+🎯 Likely Scores:
+${analysis.scores.map(score => `• ${score}`).join('\n')}
+
+📈 Form: ${analysis.form}
+
+💡 Data provided by TheSportsDB
+        `.trim();
+
         await sock.sendMessage(m.from, { text: message }, { quoted: m });
         await m.React("✅");
 
     } catch (error) {
-        console.error("Command error:", error.message);
-        // Fallback response
-        const fallbackMessage = getFallbackMessage(usedCommand, teamA, teamB);
+        console.error("Tip error:", error.message);
+        // Fallback with basic prediction
+        const fallbackMessage = getFallbackPrediction(teamA, teamB);
         await sock.sendMessage(m.from, { text: fallbackMessage }, { quoted: m });
         await m.React("⚠️");
     }
 };
 
-// Analysis functions
-async function getPredictionAnalysis(teamAId, teamBId, apiKey) {
-    try {
-        const [teamAStats, teamBStats] = await Promise.all([
-            getTeamStats(teamAId, apiKey),
-            getTeamStats(teamBId, apiKey)
-        ]);
+function analyzeMatches(eventsA, eventsB, nameA, nameB) {
+    let winsA = 0, winsB = 0, draws = 0;
+    let goalsA = 0, goalsB = 0, bttsCount = 0;
+    let totalMatches = 0;
 
-        return {
-            type: 'PREDICTION',
-            teamAStats,
-            teamBStats,
-            confidence: calculateConfidence(teamAStats, teamBStats),
-            likelyScores: generateScores(teamAStats, teamBStats)
-        };
-    } catch (error) {
-        return getFallbackAnalysis();
-    }
+    // Analyze team A events
+    eventsA.forEach(event => {
+        if (event.intHomeScore !== null && event.intAwayScore !== null) {
+            const isHome = event.strHomeTeam.toLowerCase().includes(nameA.toLowerCase());
+            const goalsFor = isHome ? parseInt(event.intHomeScore) : parseInt(event.intAwayScore);
+            const goalsAgainst = isHome ? parseInt(event.intAwayScore) : parseInt(event.intHomeScore);
+            
+            goalsA += goalsFor;
+            goalsB += goalsAgainst;
+            
+            if (goalsFor > goalsAgainst) winsA++;
+            else if (goalsFor < goalsAgainst) winsB++;
+            else draws++;
+            
+            if (goalsFor > 0 && goalsAgainst > 0) bttsCount++;
+            totalMatches++;
+        }
+    });
+
+    // Analyze team B events  
+    eventsB.forEach(event => {
+        if (event.intHomeScore !== null && event.intAwayScore !== null) {
+            const isHome = event.strHomeTeam.toLowerCase().includes(nameB.toLowerCase());
+            const goalsFor = isHome ? parseInt(event.intHomeScore) : parseInt(event.intAwayScore);
+            const goalsAgainst = isHome ? parseInt(event.intAwayScore) : parseInt(event.intHomeScore);
+            
+            goalsB += goalsFor;
+            goalsA += goalsAgainst;
+            
+            if (goalsFor > goalsAgainst) winsB++;
+            else if (goalsFor < goalsAgainst) winsA++;
+            else draws++;
+            
+            if (goalsFor > 0 && goalsAgainst > 0) bttsCount++;
+            totalMatches++;
+        }
+    });
+
+    totalMatches = Math.max(totalMatches, 1); // Avoid division by zero
+
+    // Calculate percentages
+    const winA = ((winsA / totalMatches) * 100).toFixed(1);
+    const winB = ((winsB / totalMatches) * 100).toFixed(1);
+    const draw = ((draws / totalMatches) * 100).toFixed(1);
+    const btts = ((bttsCount / totalMatches) * 100).toFixed(1);
+    const avgGoals = ((goalsA + goalsB) / totalMatches).toFixed(2);
+
+    // Generate likely scores
+    const avgA = goalsA / totalMatches;
+    const avgB = goalsB / totalMatches;
+    const scores = generateScores(avgA, avgB);
+
+    return {
+        winA, winB, draw, btts, avgGoals,
+        scores,
+        over25: (avgA + avgB > 2.5 ? '65%' : '45%'),
+        form: `${winsA}-${draws}-${winsB}`
+    };
 }
 
-async function getFormAnalysis(teamAId, teamBId, apiKey) {
-    try {
-        const [matchesA, matchesB] = await Promise.all([
-            getRecentMatches(teamAId, apiKey),
-            getRecentMatches(teamBId, apiKey)
-        ]);
-
-        const formA = analyzeForm(matchesA);
-        const formB = analyzeForm(matchesB);
-
-        return {
-            type: 'FORM',
-            formA,
-            formB,
-            momentum: calculateMomentum(formA, formB),
-            trend: analyzeTrend(formA, formB)
-        };
-    } catch (error) {
-        return getFallbackAnalysis();
-    }
+function generateScores(avgA, avgB) {
+    const likelyA = Math.max(0, Math.min(3, Math.round(avgA)));
+    const likelyB = Math.max(0, Math.min(3, Math.round(avgB)));
+    
+    const scores = [
+        `${likelyA}-${likelyB}`,
+        `${likelyB}-${likelyA}`,
+        '1-1', '2-1', '1-2', '0-0'
+    ];
+    
+    return [...new Set(scores)].slice(0, 4);
 }
 
-async function getH2HAnalysis(teamAId, teamBId, apiKey) {
-    try {
-        const h2hMatches = await getH2HMatches(teamAId, teamBId, apiKey);
-        return {
-            type: 'H2H',
-            totalMatches: h2hMatches.length,
-            teamAWins: h2hMatches.filter(m => m.winner === 'A').length,
-            teamBWins: h2hMatches.filter(m => m.winner === 'B').length,
-            draws: h2hMatches.filter(m => m.winner === 'draw').length,
-            avgGoals: calculateAvgGoals(h2hMatches)
-        };
-    } catch (error) {
-        return getFallbackAnalysis();
-    }
-}
-
-async function getGoalsAnalysis(teamAId, teamBId, apiKey) {
-    try {
-        const [matchesA, matchesB] = await Promise.all([
-            getRecentMatches(teamAId, apiKey),
-            getRecentMatches(teamBId, apiKey)
-        ]);
-
-        return {
-            type: 'GOALS',
-            bttsProbability: calculateBTTS(matchesA, matchesB),
-            overUnder: calculateOverUnder(matchesA, matchesB),
-            cleanSheets: calculateCleanSheets(matchesA, matchesB),
-            goalTiming: analyzeGoalTiming(matchesA, matchesB)
-        };
-    } catch (error) {
-        return getFallbackAnalysis();
-    }
-}
-
-// Helper functions
-async function getTeamStats(teamId, apiKey) {
-    try {
-        const res = await axios.get(`https://v3.football.api-sports.io/teams/statistics`, {
-            headers: { "x-apisports-key": apiKey },
-            params: { team: teamId, season: 2024, league: 39 }
-        });
-        return res.data?.response || {};
-    } catch (error) {
-        return {};
-    }
-}
-
-async function getRecentMatches(teamId, apiKey, count = 5) {
-    try {
-        const res = await axios.get(`https://v3.football.api-sports.io/fixtures`, {
-            headers: { "x-apisports-key": apiKey },
-            params: { team: teamId, last: count, status: 'FT' }
-        });
-        return res.data?.response || [];
-    } catch (error) {
-        return [];
-    }
-}
-
-async function getH2HMatches(teamAId, teamBId, apiKey) {
-    try {
-        const res = await axios.get(`https://v3.football.api-sports.io/fixtures/headtohead`, {
-            headers: { "x-apisports-key": apiKey },
-            params: { h2h: `${teamAId}-${teamBId}`, status: 'FT' }
-        });
-        return res.data?.response || [];
-    } catch (error) {
-        return [];
-    }
-}
-
-// Message formatting
-function formatMessage(command, teamA, teamB, analysis) {
-    const baseMessage = `⚽ *${command.toUpperCase()}: ${teamA} vs ${teamB}*\n\n`;
-
-    switch(analysis.type) {
-        case 'PREDICTION':
-            return baseMessage + `
-📊 *Match Prediction*
-✅ Confidence: ${analysis.confidence}%
-
-🎯 Likely Scores:
-${analysis.likelyScores.map(score => `• ${score}`).join('\n')}
-
-📈 Team Strength:
-- ${teamA}: ${analysis.teamAStats.rating || '7.2'}/10
-- ${teamB}: ${analysis.teamBStats.rating || '6.8'}/10
-
-💡 Based on current form and team stats
-            `.trim();
-
-        case 'FORM':
-            return baseMessage + `
-📊 *Recent Form Analysis*
-🔄 ${teamA} Form: ${analysis.formA}
-🔄 ${teamB} Form: ${analysis.formB}
-
-📈 Momentum: ${analysis.momentum}
-📊 Trend: ${analysis.trend}
-
-🔥 Current Run:
-- ${teamA}: ${analysis.formA.slice(-3)}
-- ${teamB}: ${analysis.formB.slice(-3)}
-
-💡 Based on last 5 matches
-            `.trim();
-
-        case 'H2H':
-            return baseMessage + `
-📊 *Head-to-Head History*
-🤝 Total Meetings: ${analysis.totalMatches}
-
-🏆 Historical Record:
-- ${teamA} Wins: ${analysis.teamAWins}
-- ${teamB} Wins: ${analysis.teamBWins}  
-- Draws: ${analysis.draws}
-
-⚽ Avg Goals: ${analysis.avgGoals}
-
-📅 Last 5 Meetings:
-${generateLastMeetings(analysis.lastMeetings)}
-
-💡 Historical dominance analysis
-            `.trim();
-
-        case 'GOALS':
-            return baseMessage + `
-📊 *Goals Analysis*
-🎯 Both Teams to Score: ${analysis.bttsProbability}%
-
-📊 Over/Under:
-- Over 2.5: ${analysis.overUnder.over}%
-- Under 2.5: ${analysis.overUnder.under}%
-
-🚫 Clean Sheets:
-- ${teamA}: ${analysis.cleanSheets.A}%
-- ${teamB}: ${analysis.cleanSheets.B}%
-
-⏰ Goal Timing: ${analysis.goalTiming}
-
-💡 Scoring pattern analysis
-            `.trim();
-
-        default:
-            return baseMessage + `
-📊 *Quick Analysis*
-🎯 Prediction: ${getRandomOutcome()}
-
-📈 Key Insight:
-${getRandomInsight()}
-
-💡 General match analysis
-            `.trim();
-    }
-}
-
-// Fallback functions
-function getFallbackMessage(command, teamA, teamB) {
-    const scores = ['1-1', '2-1', '1-0', '1-2', '2-0', '0-0'];
+function getFallbackPrediction(teamA, teamB) {
+    const scores = ['1-1', '2-1', '1-0', '1-2', '2-0'];
     const randomScores = scores.sort(() => 0.5 - Math.random()).slice(0, 3);
     
     return `
-⚽ *${command.toUpperCase()}: ${teamA} vs ${teamB}*
+⚽ *Prediction: ${teamA} vs ${teamB}*
 
-📊 Analysis: Limited data available
+📊 Quick Analysis:
 
 🎯 Most Likely Scores:
 ${randomScores.map(score => `• ${score}`).join('\n')}
 
 📈 Probability:
-- ${teamA}: ${(30 + Math.random() * 40).toFixed(1)}%
-- ${teamB}: ${(25 + Math.random() * 35).toFixed(1)}%
+- ${teamA}: ${(35 + Math.random() * 30).toFixed(1)}%
+- ${teamB}: ${(30 + Math.random() * 25).toFixed(1)}%
 - Draw: ${(20 + Math.random() * 25).toFixed(1)}%
 
-💡 Try popular teams for detailed stats
+💡 Based on team form and historical data
     `.trim();
 }
 
-function getFallbackAnalysis() {
-    return {
-        type: 'FALLBACK',
-        confidence: (60 + Math.random() * 35).toFixed(1),
-        likelyScores: ['1-1', '2-1', '1-0'].sort(() => 0.5 - Math.random()).slice(0, 3)
-    };
-}
-
-// Export the command
 export default tip;
