@@ -1,45 +1,72 @@
-// ─── Imports ──────────────────────────────
+// Imports
 import axios from "axios";
 import ytSearch from "yt-search";
 
-// ─── Constants ────────────────────────────
-const BASE_URL = "https://jawad-tech.vercel.app/download/";
-const PREFIX = ".";
+// API Base
+const BASE_URL = "https://jawad-tech.vercel.app/download/ytmp3?url=";
 
-// ─── Utility Helpers ──────────────────────
-const delayTyping = async (sock, jid, text = "🎶 Ⓝ̱ͬ͘Ⓔ̤̓͝C̣ͫ̕Ⓣͤ͏̙O̡̱̾R̫͑͜🍯̶͓ͥ BOT 𝙄𝙎 𝙊𝙉 𝙄𝙏...") => {
+/**
+ * Delay typing simulation + ephemeral bot message
+ */
+const delayTyping = async (sock, jid, text = "🎶 THE-HUB BOT 𝙄𝙎 𝙊𝙉 𝙄𝙏...") => {
   await sock.presenceSubscribe(jid);
-  await sock.sendMessage(jid, { text }, { ephemeralExpiration: 86400 });
+  await sock.sendMessage(
+    jid,
+    { text },
+    { ephemeralExpiration: 86400 } // 24 hours
+  );
 };
 
-const sendUsage = (sock, jid, command, msg) =>
-  sock.sendMessage(
+/**
+ * Send proper usage guide if user forgets keyword
+ */
+const sendUsage = (sock, jid, command, msg) => {
+  return sock.sendMessage(
     jid,
     {
-      text: `❗ *Usage:* \`.${command} <song/video>\`\n💡 *Example:* \`.${command} calm down remix\``,
+      text:
+        "❗ *Usage:* `." +
+        command +
+        " <song/video>`\n💡 *Example:* `." +
+        command +
+        " calm down remix`",
     },
     { quoted: msg }
   );
+};
 
-const sendError = (sock, jid, error, msg) =>
-  sock.sendMessage(
+/**
+ * Error handler
+ */
+const sendError = async (sock, jid, error, msg) => {
+  console.error("[POP🔴ERROR]:", error.message);
+  return sock.sendMessage(
     jid,
     {
-      text: `⚠️ *Error:* \`${error.message}\`\nTry again or use another keyword.`,
+      text:
+        "⚠️ *Error:* `" +
+        error.message +
+        "`\nTry again or use another keyword.",
     },
     { quoted: msg }
   );
+};
 
-// ─── Core Function ────────────────────────
+/**
+ * Core function: handle media (music / video)
+ */
 const handleMediaCommand = async (msg, sock, format = "mp3") => {
-  const body = msg.body || "";
+  const prefix = ".";
+  const body = msg.message || "";
   const jid = msg.key.remoteJid;
 
-  // Extract command & query
-  const command = body.startsWith(PREFIX)
-    ? body.slice(PREFIX.length).split(" ")[0].toLowerCase()
+  // Extract command keyword
+  const command = body.startsWith(prefix)
+    ? body.slice(prefix.length).split(" ")[0].toLowerCase()
     : "";
-  const query = body.slice(PREFIX.length + command.length).trim();
+
+  // Extract search query
+  const query = body.slice(prefix.length + command.length).trim();
   if (!query) return sendUsage(sock, jid, command, msg);
 
   try {
@@ -48,54 +75,61 @@ const handleMediaCommand = async (msg, sock, format = "mp3") => {
     // Search YouTube
     const results = await ytSearch(query);
     const video = results.videos[0];
-    if (!video)
+
+    if (!video) {
       return sock.sendMessage(
         jid,
         { text: "😔 No results found. Try another keyword." },
         { quoted: msg }
       );
+    }
 
+    // Video details
     const ytUrl = `https://www.youtube.com/watch?v=${video.videoId}`;
     const apiUrl =
-      BASE_URL +
-      (format === "mp3"
-        ? `ytmp3?url=${video.videoId}`
-        : `ytmp4?url=${video.videoId}`);
+      format === "mp3"
+        ? `${BASE_URL}${video.videoId}&format=mp3`
+        : `https://jawad-tech.vercel.app/download/ytmp4?url=${video.videoId}`;
 
     // Fetch download link
     const { data } = await axios.get(apiUrl);
-    if (!data.url)
+    if (!data.url) {
       return sock.sendMessage(
         jid,
         { text: "❌ Failed to generate download link. API may be offline." },
         { quoted: msg }
       );
+    }
 
-    // Caption
-    const caption = `
-╭━━🎧 Ⓝ̸̳͌Ⓔ̤ͭ͘Ĉ̲͞Ⓣ͓̉͠O̪͒͠R͎̒͢🍯̽͝ͅ ̘̾́M̷̭ͥĚ҉̥D̸͓͐Ǐ̵͈A̴̫̾ ━━╮
-┃ 🔊 *${format.toUpperCase()} Request Ready!*
-┃ 🎵 *Title:* ${video.title}
-┃ 👤 *Author:* ${video.author.name}
-┃ ⏱️ *Duration:* ${video.timestamp}
-┃ 📅 *Published:* ${video.ago}
-┃ 👁️ *Views:* ${video.views.toLocaleString()}
-┃ 🔗 *URL:* ${ytUrl}
-┃ 📥 *Format:* ${format.toUpperCase()}
-╰━━━━━━━━━━━━━━━━━━━━╯
-⚡ Powered by *ⓃⒺCⓉOR🍯*
-    `.trim();
+    // Build caption
+    const caption = (
+      `╭━━🎧 THE HUB 𝙈𝙀𝘿𝙄𝘼 ━━╮\n` +
+      `┃ 🔊 *${format.toUpperCase()} Request Ready!*\n┃\n` +
+      `┃ 🎵 *Title:* ${video.title}\n` +
+      `┃ 👤 *Author:* ${video.author.name}\n` +
+      `┃ ⏱️ *Duration:* ${video.timestamp}\n` +
+      `┃ 📅 *Published:* ${video.ago}\n` +
+      `┃ 👁️ *Views:* ${video.views.toLocaleString()}\n` +
+      `┃ 🔗 *URL:* ${ytUrl}\n` +
+      `┃ 📥 *Format:* ${format.toUpperCase()}\n` +
+      `╰━━━━━━━━━━━━━━━━━━━━╯\n` +
+      `⚡ Powered by *THE-HUB BOT V2*`
+    ).trim();
 
-    // Preview (thumbnail + details)
+    // Send preview
     await sock.sendMessage(
       jid,
-      { image: { url: video.thumbnail }, caption },
+      {
+        image: { url: video.thumbnail },
+        caption,
+      },
       { quoted: msg }
     );
 
-    // Media File
+    // Send file
     const fileName =
       video.title.replace(/[\\/:*?"<>|]/g, "") + "." + format;
+
     await sock.sendMessage(
       jid,
       {
@@ -110,20 +144,46 @@ const handleMediaCommand = async (msg, sock, format = "mp3") => {
   }
 };
 
-// ─── Message Router ───────────────────────
+/**
+ * Handler for incoming messages
+ */
 const mediaHandler = async (msg, sock) => {
+  const prefix = ".";
   const body = msg.body || "";
-  const command = body.startsWith(PREFIX)
-    ? body.slice(PREFIX.length).split(" ")[0].toLowerCase()
+
+  const command = body.startsWith(prefix)
+    ? body.slice(prefix.length).split(" ")[0].toLowerCase()
     : "";
 
-  if (["play", "music", "song", "mp3", "mp3doc"].includes(command))
-    return handleMediaCommand(msg, sock, "mp3");
+  switch (command) {
+    case "play":
+    case "music":
+    case "song":
+    case "mp3":
+    case "mp3doc":
+      return handleMediaCommand(msg, sock, "mp3");
 
-  if (["video", "vid", "movie", "mp4"].includes(command))
-    return handleMediaCommand(msg, sock, "mp4");
+    case "video":
+    case "vid":
+    case "movie":
+    case "mp4":
+      return handleMediaCommand(msg, sock, "mp4");
+  }
 };
 
-// ─── Exports ──────────────────────────────
-export const aliases = ["play", "song", "music", "mp3", "mp3doc", "video", "vid", "mp4", "movie"];
+/**
+ * Aliases
+ */
+export const aliases = [
+  "play",
+  "song",
+  "music",
+  "mp3",
+  "mp3doc",
+  "video",
+  "vid",
+  "mp4",
+  "movie",
+];
+
 export default mediaHandler;
