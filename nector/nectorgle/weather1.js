@@ -1,72 +1,101 @@
-import config from '../../config.cjs';
-import axios from 'axios';
+import config from "../../config.cjs";
+import axios from "axios";
+
+// Helper to convert UTC to Nairobi time
+const formatTime = (timestamp) => {
+  return new Date(timestamp * 1000).toLocaleTimeString("en-KE", {
+    timeZone: "Africa/Nairobi",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+// Helper to get emoji based on weather condition
+const getWeatherEmoji = (main) => {
+  switch (main.toLowerCase()) {
+    case "clear": return "☀️";
+    case "clouds": return "☁️";
+    case "rain": return "🌧️";
+    case "drizzle": return "🌦️";
+    case "thunderstorm": return "⛈️";
+    case "snow": return "❄️";
+    case "mist": case "fog": return "🌫️";
+    default: return "🌍";
+  }
+};
 
 const weatherCommand = async (m, Matrix) => {
   const command = m.body.startsWith(config.PREFIX)
-    ? m.body.slice(config.PREFIX.length).split(' ')[0].toLowerCase()
-    : '';
+    ? m.body.slice(config.PREFIX.length).split(" ")[0].toLowerCase()
+    : "";
   const args = m.body.slice(config.PREFIX.length + command.length).trim();
 
-  if (!["weather", "forecast", "wthr"].includes(command)) return;
+  if (!["weather", "forecast"].includes(command)) return;
 
-  await Matrix.sendMessage(m.from, { react: { text: "☀️", key: m.key } });
+  await Matrix.sendMessage(m.from, { react: { text: "⛅", key: m.key } });
 
   if (!args) {
     return m.reply(
-      `🌍 *Please provide a location (city name).* Example:\n` +
-      `\`${config.PREFIX}${command} Eldoret\``
+      `🌍 *Please provide a city name.*\n\nExample:\n${config.PREFIX}weather Eldoret\n${config.PREFIX}forecast Nairobi`
     );
   }
 
+  const apiKey = "51d6af2ae5834a5b11058fe7256af05d";
+
   try {
-    const apiKey = "51d6af2ae5834a5b11058fe7256af05d";
+    if (command === "weather") {
+      const res = await axios.get(
+        `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(
+          args
+        )}&appid=${apiKey}&units=metric`
+      );
 
-    // 1. Current weather
-    const currUrl = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(args)}&units=metric&appid=${apiKey}`;
-    const currRes = await axios.get(currUrl);
-    const curr = currRes.data;
+      const data = res.data;
+      const weather = data.weather[0];
+      const emoji = getWeatherEmoji(weather.main);
 
-    const name = curr.name;
-    const country = curr.sys.country;
-    const desc = curr.weather?.[0]?.description || "N/A";
-    const temp = curr.main.temp;
-    const feels = curr.main.feels_like;
-    const humidity = curr.main.humidity;
-    const wind = curr.wind.speed;
-    const sunrise = new Date(curr.sys.sunrise * 1000).toLocaleTimeString("en-KE");
-    const sunset = new Date(curr.sys.sunset * 1000).toLocaleTimeString("en-KE");
+      const reply = `🌦️ *Weather in ${data.name}, ${data.sys.country}*\n
+${emoji} Condition: ${weather.description}
+🌡️ Temperature: ${data.main.temp}°C (Feels like ${data.main.feels_like}°C)
+💧 Humidity: ${data.main.humidity}%
+🌬️ Wind: ${data.wind.speed} m/s
+🌅 Sunrise: ${formatTime(data.sys.sunrise)}
+🌇 Sunset: ${formatTime(data.sys.sunset)}`;
 
-    // 2. Forecast (next 2 days from 5-day/3-hour API)
-    const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(args)}&units=metric&appid=${apiKey}`;
-    const forecastRes = await axios.get(forecastUrl);
-    const forecast = forecastRes.data.list;
+      await m.reply(reply);
 
-    // Pick tomorrow 12:00 and day after 12:00
-    const tomorrow = forecast.find(f => f.dt_txt.includes("12:00:00"));
-    const dayAfter = forecast.find(f => {
-      const date = new Date(f.dt * 1000);
-      return f.dt_txt.includes("12:00:00") && date.getDate() > new Date().getDate() + 1;
-    });
+    } else if (command === "forecast") {
+      const res = await axios.get(
+        `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(
+          args
+        )}&appid=${apiKey}&units=metric`
+      );
 
-    let reply = `🌍 *Weather for ${name}, ${country}*\n\n` +
-      `☀️ *Current*: ${desc}\n` +
-      `🌡 Temp: *${temp}°C* (feels like *${feels}°C*)\n` +
-      `💧 Humidity: *${humidity}%*\n` +
-      `💨 Wind: *${wind} m/s*\n` +
-      `🌅 Sunrise: ${sunrise}\n` +
-      `🌇 Sunset: ${sunset}\n\n`;
+      const data = res.data;
 
-    if (tomorrow) {
-      reply += `📅 *Tomorrow*: ${tomorrow.weather[0].main}, Temp: *${tomorrow.main.temp}°C*\n`;
+      // Take forecast at 12:00 local time (UTC+3) for next 3 days
+      const forecastList = data.list.filter((item) =>
+        item.dt_txt.includes("12:00:00")
+      ).slice(0, 3);
+
+      let forecastText = `📅 *3-Day Forecast for ${data.city.name}, ${data.city.country}*\n\n`;
+
+      for (const item of forecastList) {
+        const date = new Date(item.dt * 1000).toLocaleDateString("en-KE", {
+          weekday: "long",
+          day: "numeric",
+          month: "short",
+          timeZone: "Africa/Nairobi",
+        });
+        const emoji = getWeatherEmoji(item.weather[0].main);
+
+        forecastText += `📌 *${date}*\n${emoji} ${item.weather[0].description}\n🌡️ Temp: ${item.main.temp}°C\n💧 Humidity: ${item.main.humidity}%\n\n`;
+      }
+
+      await m.reply(forecastText);
     }
-    if (dayAfter) {
-      reply += `📅 *Day After*: ${dayAfter.weather[0].main}, Temp: *${dayAfter.main.temp}°C*`;
-    }
-
-    await m.reply(reply);
-
   } catch (err) {
-    console.error("[WEATHER ERROR]", err.response?.data || err.message);
+    console.error("[WEATHER ERROR]", err.message);
     m.reply("❌ *Could not fetch weather/forecast. Check logs for details.*");
   }
 };
