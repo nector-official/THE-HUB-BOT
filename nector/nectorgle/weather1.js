@@ -13,28 +13,30 @@ const weatherCommand = async (m, Matrix) => {
 
   if (!args) {
     return m.reply(
-      `🌍 *Please provide a location (city name) to get weather info.*\n\n` +
-      `Example:\n\`${config.PREFIX}${command} Eldoret\`\n`
+      `🌍 *Please provide a location (city name).* Example:\n` +
+      `\`${config.PREFIX}${command} Eldoret\``
     );
   }
 
   try {
-    const apiKey = "51d6af2ae5834a5b11058fe7256af05d"; // Your OpenWeather API Key
+    const apiKey = "51d6af2ae5834a5b11058fe7256af05d";
 
-    // 1. Get coordinates from city name
+    // 1. Geocoding to get coordinates
     const geoUrl = `http://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(args)}&limit=1&appid=${apiKey}`;
     const geoRes = await axios.get(geoUrl);
+
     if (!geoRes.data.length) {
-      return m.reply("❌ *Location not found. Please try another city.*");
+      return m.reply("❌ *Location not found. Try another city.*");
     }
+
     const { lat, lon, name, country } = geoRes.data[0];
 
-    // 2. Fetch weather using One Call API
-    const weatherUrl = `https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`;
+    // 2. Weather with One Call v2.5
+    const weatherUrl = `https://api.openweathermap.org/data/2.5/onecall?lat=${lat}&lon=${lon}&units=metric&appid=${apiKey}`;
     const res = await axios.get(weatherUrl);
     const data = res.data;
 
-    // Current
+    // Current weather
     const current = data.current;
     const currDesc = current.weather?.[0]?.description || "N/A";
     const currTemp = current.temp;
@@ -44,7 +46,7 @@ const weatherCommand = async (m, Matrix) => {
     const sunrise = new Date(current.sunrise * 1000).toLocaleTimeString("en-KE");
     const sunset = new Date(current.sunset * 1000).toLocaleTimeString("en-KE");
 
-    // Forecast (today + tomorrow)
+    // Forecast: today + tomorrow
     const today = data.daily[0];
     const tomorrow = data.daily[1];
 
@@ -56,7 +58,6 @@ const weatherCommand = async (m, Matrix) => {
     const tomMin = tomorrow.temp.min;
     const tomMax = tomorrow.temp.max;
 
-    // Reply message
     const replyMsg =
       `🌍 *Weather for ${name}, ${country}*\n\n` +
       `☀️ *Current*: ${currDesc}\n` +
@@ -69,9 +70,10 @@ const weatherCommand = async (m, Matrix) => {
       `📅 *Tomorrow*: ${tomDesc}, Min: *${tomMin}°C*, Max: *${tomMax}°C*`;
 
     await m.reply(replyMsg);
+
   } catch (err) {
-    console.error("[WEATHER ERROR]", err.message);
-    m.reply("❌ *Could not fetch weather/forecast. Try again later.*");
+    console.error("[WEATHER ERROR]", err.response?.data || err.message);
+    m.reply("❌ *Could not fetch weather/forecast. Check logs for details.*");
   }
 };
 
