@@ -2,16 +2,21 @@
 /*
  USAGE:
    !predict Team A vs Team B
+   !tip Team A vs Team B
  EXAMPLE:
    !predict Monaco vs Manchester City
+   !tip Monaco vs Manchester City
 */
 
 import axios from "axios";
 import fs from "fs";
 
-const API_KEY = "YOUR_API_KEY"; // put your API key here
+const API_KEY = "YOUR_API_KEY"; // replace with your real API key
 const BASE_URL = "https://v3.football.api-sports.io";
 const TEAM_CACHE = "./team_cache.json";
+
+// List of triggers/aliases
+export const commandNames = ["!predict", "!sure"];
 
 // Load / create team cache
 let cache = {};
@@ -93,7 +98,11 @@ function getPossibleScore(statsA, statsB) {
 // Main Command
 export const predictCommand = async (sock, chatId, text) => {
   try {
-    const match = text.split(" ").slice(1).join(" ");
+    const lowerText = text.toLowerCase();
+
+    // Remove the trigger part (works for both !predict and !tip)
+    let triggerUsed = commandNames.find(t => lowerText.startsWith(t));
+    const match = text.slice(triggerUsed.length).trim();
     const [teamA, teamB] = match.split(" vs ").map(t => t.trim());
 
     if (!teamA || !teamB) {
@@ -108,7 +117,11 @@ export const predictCommand = async (sock, chatId, text) => {
     const winPctB = ((statsB.wins / statsB.played) * 100).toFixed(1);
     const drawPct = (((statsA.draws + statsB.draws) / (statsA.played + statsB.played)) * 100).toFixed(1);
 
-    const avgGoals = ((statsA.goalsFor + statsA.goalsAgainst + statsB.goalsFor + statsB.goalsAgainst) / (statsA.played + statsB.played)).toFixed(2);
+    const avgGoals = (
+      (statsA.goalsFor + statsA.goalsAgainst + statsB.goalsFor + statsB.goalsAgainst) /
+      (statsA.played + statsB.played)
+    ).toFixed(2);
+
     const bttsPct = (((statsA.btts + statsB.btts) / (statsA.played + statsB.played)) * 100).toFixed(1);
 
     const possibleScore = getPossibleScore(statsA, statsB);
