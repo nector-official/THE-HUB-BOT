@@ -136,13 +136,10 @@ const tip = async (m, sock) => {
   } catch (err) {
     console.error("[TIP ERROR]", err.response?.data || err.message);
     await sock.sendMessage(m.from, {
-     
- text: "⚠️ Could not fetch analysis (API error or key issue)."
+      text: "⚠️ Could not fetch analysis (API error or key issue)."
     }, { quoted: m });
     await m.React("⚠️");
   }
 };
 
 export default tip;
-
-Think more careful think more careful I want it working I don't want exterior pesting I just need a direct command
