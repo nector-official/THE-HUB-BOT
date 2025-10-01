@@ -1,163 +1,147 @@
 import axios from "axios";
 
-const SPORTMONKS = {
-  base: "https://api.sportmonks.com/v3/football",
-  token: "j6c2X1HnBsib0wiGKIU9NJeKFf3Qs8QUOgwtvPcOEK6X7cBZ2h3a6GJxmmkg"
+const API_BASE = "https://www.thesportsdb.com/api/v1/json/123"; // replace 123 with your own key if you have premium
+
+// Normalize names (strip FC, CF, etc.)
+const normalizeName = (name) => {
+  return name
+    .toLowerCase()
+    .replace(/\b(fc|cf|sc|ac|club|team)\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 };
 
-const SPORTSDB = {
-  base: "https://www.thesportsdb.com/api/v1/json/123" // replace 123 with your API key
-};
-
-// =========================
-// 🔍 TEAM SEARCH HELPERS
-// =========================
-const searchTeamSportMonks = async (name) => {
+// Search and fuzzy match a team
+const getTeam = async (teamName) => {
   try {
-    const res = await axios.get(`${SPORTMONKS.base}/teams/search/${encodeURIComponent(name)}`, {
-      params: { api_token: SPORTMONKS.token }
-    });
-    const list = res.data?.data || [];
-    if (list.length) {
-      const best = list[0];
-      return { id: best.id, name: best.name, source: "sportmonks" };
-    }
-  } catch (e) { /* ignore */ }
-  return null;
-};
-
-const searchTeamSportsDB = async (name) => {
-  try {
-    const res = await axios.get(`${SPORTSDB.base}/searchteams.php`, {
-      params: { t: name }
+    const res = await axios.get(`${API_BASE}/searchteams.php`, {
+      params: { t: teamName }
     });
     const teams = res.data?.teams;
-    if (teams && teams.length) {
-      const first = teams[0];
-      return { id: first.idTeam, name: first.strTeam, source: "sportsdb" };
+    if (!teams || !teams.length) return null;
+
+    // Try to find closest match
+    const query = normalizeName(teamName);
+    let bestMatch = teams[0];
+    for (const t of teams) {
+      if (normalizeName(t.strTeam) === query) {
+        bestMatch = t;
+        break;
+      }
+      if (normalizeName(t.strTeam).includes(query)) {
+        bestMatch = t;
+        break;
+      }
     }
-  } catch (e) { /* ignore */ }
-  return null;
+    return bestMatch;
+  } catch (err) {
+    console.error("[TEAM SEARCH ERROR]", err.message);
+    return null;
+  }
 };
 
-const searchTeam = async (name) => {
-  let t = await searchTeamSportMonks(name);
-  if (t) return t;
-  t = await searchTeamSportsDB(name);
-  if (t) return t;
-  return null;
-};
-
-// =========================
-// 📊 MATCH DATA FETCH
-// =========================
-const fetchRecentMatchesSportMonks = async (teamId) => {
+// Get last matches
+const getLastMatches = async (teamId) => {
   try {
-    const res = await axios.get(`${SPORTMONKS.base}/teams/${teamId}`, {
-      params: { api_token: SPORTMONKS.token, include: "fixtures.results:order(date|desc)" }
-    });
-    const matches = res.data?.data?.fixtures?.results || [];
-    return matches.slice(0, 5).map(m => ({
-      home: m.home_team.name,
-      away: m.away_team.name,
-      score: `${m.scores.home_score}-${m.scores.away_score}`
-    }));
-  } catch (e) { return []; }
-};
-
-const fetchRecentMatchesSportsDB = async (teamId) => {
-  try {
-    const res = await axios.get(`${SPORTSDB.base}/eventslast.php`, {
+    const res = await axios.get(`${API_BASE}/eventslast.php`, {
       params: { id: teamId }
     });
-    const matches = res.data?.results || [];
-    return matches.slice(0, 5).map(m => ({
-      home: m.strHomeTeam,
-      away: m.strAwayTeam,
-      score: `${m.intHomeScore}-${m.intAwayScore}`
-    }));
-  } catch (e) { return []; }
+    return res.data?.results || [];
+  } catch (err) {
+    return [];
+  }
 };
 
-const getRecentMatches = async (team) => {
-  if (team.source === "sportmonks") return await fetchRecentMatchesSportMonks(team.id);
-  if (team.source === "sportsdb") return await fetchRecentMatchesSportsDB(team.id);
-  return [];
-};
-
-// =========================
-// 🔮 PREDICTION LOGIC
-// =========================
-const analyzeMatches = (matches) => {
-  let goals = 0, over25 = 0;
-  matches.forEach(m => {
-    const [h, a] = m.score.split("-").map(Number);
-    const total = h + a;
-    goals += total;
-    if (total > 2) over25++;
-  });
-  const avgGoals = (goals / matches.length).toFixed(2);
-  const probOver25 = ((over25 / matches.length) * 100).toFixed(0);
-  return { avgGoals, probOver25 };
-};
-
-// =========================
-// 🏆 MAIN COMMAND
-// =========================
 const predict = async (m, sock) => {
   try {
     const prefix = "!";
     const text = m.body?.trim() || "";
-    if (!text.startsWith(prefix)) return;
 
-    const args = text.slice(prefix.length).trim().split(" ");
-    const cmd = args.shift().toLowerCase();
+    if (!text.startsWith(prefix)) return;
+    const cmd = text.slice(prefix.length).split(" ")[0].toLowerCase();
     if (cmd !== "predict") return;
 
-    const teamAName = args[0];
-    const teamBName = args.slice(1).join(" ");
-    if (!teamAName || !teamBName) {
-      return sock.sendMessage(m.from, { text: "❌ Usage: !predict <TeamA> <TeamB>" }, { quoted: m });
-    }
-
-    // 🔍 Search both teams
-    const teamA = await searchTeam(teamAName);
-    const teamB = await searchTeam(teamBName);
-
-    if (!teamA || !teamB) {
-      return sock.sendMessage(m.from, {
-        text: `❌ Could not find both teams. (*${teamAName}*, *${teamBName}*)\nTry spelling differently.`
+    const args = text.slice(prefix.length + cmd.length).trim();
+    if (!args.includes(" vs ")) {
+      return await sock.sendMessage(m.from, {
+        text: "❌ Format: *!predict TeamA vs TeamB*"
       }, { quoted: m });
     }
 
-    // 📊 Fetch stats
-    const matchesA = await getRecentMatches(teamA);
-    const matchesB = await getRecentMatches(teamB);
+    const [teamAName, teamBName] = args.split(" vs ").map(t => t.trim());
 
-    const statsA = analyzeMatches(matchesA);
-    const statsB = analyzeMatches(matchesB);
+    await m.React("⏳");
 
-    const msg = `
-📊 *Prediction Analysis*
-${teamA.name} vs ${teamB.name}
+    const teamA = await getTeam(teamAName);
+    const teamB = await getTeam(teamBName);
 
-📌 ${teamA.name} last 5 matches:
-${matchesA.map(m => `${m.home} ${m.score} ${m.away}`).join("\n")}
+    if (!teamA || !teamB) {
+      return await sock.sendMessage(m.from, {
+        text: `❌ Could not find both teams. (*${teamAName}*, *${teamBName}*)\nTry a different spelling.`
+      }, { quoted: m });
+    }
 
-⚽ Avg Goals: ${statsA.avgGoals}
-🔮 Over 2.5 Probability: ${statsA.probOver25}%
+    const lastA = await getLastMatches(teamA.idTeam);
+    const lastB = await getLastMatches(teamB.idTeam);
 
-📌 ${teamB.name} last 5 matches:
-${matchesB.map(m => `${m.home} ${m.score} ${m.away}`).join("\n")}
+    const matches = [...lastA.slice(0, 5), ...lastB.slice(0, 5)];
+    if (matches.length === 0) {
+      return await sock.sendMessage(m.from, {
+        text: `⚠️ No recent match data for *${teamA.strTeam}* or *${teamB.strTeam}*.`
+      }, { quoted: m });
+    }
 
-⚽ Avg Goals: ${statsB.avgGoals}
-🔮 Over 2.5 Probability: ${statsB.probOver25}%
+    // Stats
+    let teamAWins = 0, teamBWins = 0, draws = 0, goals = 0, btts = 0;
+
+    matches.forEach(match => {
+      const home = parseInt(match.intHomeScore ?? 0);
+      const away = parseInt(match.intAwayScore ?? 0);
+      goals += home + away;
+
+      if (home > 0 && away > 0) btts++;
+
+      if (home > away) {
+        if (normalizeName(match.strHomeTeam) === normalizeName(teamA.strTeam)) teamAWins++;
+        if (normalizeName(match.strHomeTeam) === normalizeName(teamB.strTeam)) teamBWins++;
+      } else if (away > home) {
+        if (normalizeName(match.strAwayTeam) === normalizeName(teamA.strTeam)) teamAWins++;
+        if (normalizeName(match.strAwayTeam) === normalizeName(teamB.strTeam)) teamBWins++;
+      } else {
+        draws++;
+      }
+    });
+
+    const total = matches.length;
+    const avgGoals = (goals / total).toFixed(2);
+
+    const message = `
+📊 *Prediction: ${teamA.strTeam} vs ${teamB.strTeam}*
+
+📌 Based on last ${total} matches
+
+🟢 Win %:
+- ${teamA.strTeam}: ${(teamAWins / total * 100).toFixed(1)}%
+- ${teamB.strTeam}: ${(teamBWins / total * 100).toFixed(1)}%
+- Draw: ${(draws / total * 100).toFixed(1)}%
+
+⚽ BTTS: ${(btts / total * 100).toFixed(1)}%
+📈 Avg Goals: ${avgGoals}
+
+🎯 Possible Correct Score:
+- Tight: 1-1
+- Open: 2-1 / 1-2
     `.trim();
 
-    await sock.sendMessage(m.from, { text: msg }, { quoted: m });
+    await sock.sendMessage(m.from, { text: message }, { quoted: m });
+    await m.React("✅");
 
   } catch (err) {
-    await sock.sendMessage(m.from, { text: "⚠️ Error fetching prediction. Try again later." }, { quoted: m });
+    console.error("[PREDICT ERROR]", err.message);
+    await sock.sendMessage(m.from, {
+      text: "⚠️ Could not fetch prediction (API error)."
+    }, { quoted: m });
+    await m.React("⚠️");
   }
 };
 
