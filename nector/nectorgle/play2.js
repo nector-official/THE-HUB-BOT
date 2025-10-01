@@ -56,8 +56,8 @@ const playCommand = async (m, Matrix) => {
     const outputPath = path.join('./', `${cleanTitle}.mp3`);
 
     const apis = [
-      `https://xploader-api.vercel.app/ytmp3?url=${videoUrl}`,
-      `https://apis.davidcyriltech.my.id/youtube/mp3?url=${videoUrl}`,
+      `https://api.vreden.my.id/api/ytplaymp3?query=${videoUrl}`,
+      `https://apis.davidcyriltech.my.id/download/ytmp4?url=${videoUrl}`,
       `https://api.ryzendesu.vip/api/downloader/ytmp3?url=${videoUrl}`,
       `https://api.dreaded.site/api/ytdl/audio?url=${videoUrl}`
     ];
