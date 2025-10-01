@@ -1,92 +1,129 @@
-import fetch from 'node-fetch';
-import config from '../../config.cjs';
+// ─── Imports ──────────────────────────────
+import axios from "axios";
+import ytSearch from "yt-search";
 
-const play = async (m, sock) => {
-  const prefix = config.PREFIX;
-  const cmd = m.body.startsWith(prefix)
-    ? m.body.slice(prefix.length).split(' ')[0].toLowerCase()
-    : '';
-  const text = m.body.slice(prefix.length + cmd.length).trim();
+// ─── Constants ────────────────────────────
+const BASE_URL = "https://jawad-tech.vercel.app/download/";
+const PREFIX = ".";
 
-  if (cmd !== 'play3') return;
-
-  if (!text) {
-    await sock.sendMessage(m.from, {
-      text: `❗ *Usage:* \`${prefix}play <song name or YouTube link>\``
-    }, { quoted: m });
-    return;
-  }
-
-  await m.React('🔍');
-
-  const apis = [
-    `https://apis.davidcyriltech.my.id/download/ytmp3?url=${encodeURIComponent(text)}&apikey=gifted-md`,
-    `https://www.dark-yasiya-api.site/download/ytmp3?url=${encodeURIComponent(text)}`,
-    `https://api.dreaded.site/api/ytdl/video?query=${encodeURIComponent(text)}`
-  ];
-
-  let result;
-
-  for (const api of apis) {
-    try {
-      const res = await fetch(api);
-      const data = await res.json();
-
-      const audio =
-        data?.result?.audio?.url || data?.result?.url || data?.data?.url || data?.url;
-
-      if (audio) {
-        result = {
-          title: data?.result?.title || data?.data?.title || 'Unknown Title',
-          duration: data?.result?.duration || data?.data?.duration || 'Unknown',
-          thumbnail: data?.result?.thumbnail || data?.data?.thumbnail || null,
-          size: data?.result?.size || data?.data?.size || 'Unknown',
-          audio
-        };
-        break;
-      }
-    } catch (e) {
-      continue;
-    }
-  }
-
-  if (!result) {
-    await m.React('❌');
-    return sock.sendMessage(m.from, {
-      text: '❌ *All sources failed. Try a different song or link.*'
-    }, { quoted: m });
-  }
-
-  const { title, duration, thumbnail, size, audio } = result;
-
-  await m.React('🎶');
-
-  const caption = `
-🎧 *Now Playing...*
-  
-🎵 *${title}*
-⏱️ Duration: *${duration}*
-📦 Size: *${size}*
-  
-✨ Requested by: @${m.sender.split('@')[0]}
-  `.trim();
-
-  if (thumbnail) {
-    await sock.sendMessage(m.from, {
-      image: { url: thumbnail },
-      caption,
-      mentions: [m.sender]
-    }, { quoted: m });
-  }
-
-  await sock.sendMessage(m.from, {
-    audio: { url: audio },
-    mimetype: 'audio/mp4',
-    fileName: `${title}.mp3`,
-    ptt: false
-  }, { quoted: m });
-
-  await m.React('✅');
+// ─── Utility Helpers ──────────────────────
+const delayTyping = async (sock, jid, text = "🎶 Ⓝ̱ͬ͘Ⓔ̤̓͝C̣ͫ̕Ⓣͤ͏̙O̡̱̾R̫͑͜🍯̶͓ͥ BOT 𝙄𝙎 𝙊𝙉 𝙄𝙏...") => {
+  await sock.presenceSubscribe(jid);
+  await sock.sendMessage(jid, { text }, { ephemeralExpiration: 86400 });
 };
 
-export default play;
+const sendUsage = (sock, jid, command, msg) =>
+  sock.sendMessage(
+    jid,
+    {
+      text: `❗ *Usage:* \`.${command} <song/video>\`\n💡 *Example:* \`.${command} calm down remix\``,
+    },
+    { quoted: msg }
+  );
+
+const sendError = (sock, jid, error, msg) =>
+  sock.sendMessage(
+    jid,
+    {
+      text: `⚠️ *Error:* \`${error.message}\`\nTry again or use another keyword.`,
+    },
+    { quoted: msg }
+  );
+
+// ─── Core Function ────────────────────────
+const handleMediaCommand = async (msg, sock, format = "mp3") => {
+  const body = msg.body || "";
+  const jid = msg.key.remoteJid;
+
+  // Extract command & query
+  const command = body.startsWith(PREFIX)
+    ? body.slice(PREFIX.length).split(" ")[0].toLowerCase()
+    : "";
+  const query = body.slice(PREFIX.length + command.length).trim();
+  if (!query) return sendUsage(sock, jid, command, msg);
+
+  try {
+    await delayTyping(sock, jid);
+
+    // Search YouTube
+    const results = await ytSearch(query);
+    const video = results.videos[0];
+    if (!video)
+      return sock.sendMessage(
+        jid,
+        { text: "😔 No results found. Try another keyword." },
+        { quoted: msg }
+      );
+
+    const ytUrl = `https://www.youtube.com/watch?v=${video.videoId}`;
+    const apiUrl =
+      BASE_URL +
+      (format === "mp3"
+        ? `ytmp3?url=${video.videoId}`
+        : `ytmp4?url=${video.videoId}`);
+
+    // Fetch download link
+    const { data } = await axios.get(apiUrl);
+    if (!data.url)
+      return sock.sendMessage(
+        jid,
+        { text: "❌ Failed to generate download link. API may be offline." },
+        { quoted: msg }
+      );
+
+    // Caption
+    const caption = `
+╭━━🎧 Ⓝ̸̳͌Ⓔ̤ͭ͘Ĉ̲͞Ⓣ͓̉͠O̪͒͠R͎̒͢🍯̽͝ͅ ̘̾́M̷̭ͥĚ҉̥D̸͓͐Ǐ̵͈A̴̫̾ ━━╮
+┃ 🔊 *${format.toUpperCase()} Request Ready!*
+┃ 🎵 *Title:* ${video.title}
+┃ 👤 *Author:* ${video.author.name}
+┃ ⏱️ *Duration:* ${video.timestamp}
+┃ 📅 *Published:* ${video.ago}
+┃ 👁️ *Views:* ${video.views.toLocaleString()}
+┃ 🔗 *URL:* ${ytUrl}
+┃ 📥 *Format:* ${format.toUpperCase()}
+╰━━━━━━━━━━━━━━━━━━━━╯
+⚡ Powered by *ⓃⒺCⓉOR🍯*
+    `.trim();
+
+    // Preview (thumbnail + details)
+    await sock.sendMessage(
+      jid,
+      { image: { url: video.thumbnail }, caption },
+      { quoted: msg }
+    );
+
+    // Media File
+    const fileName =
+      video.title.replace(/[\\/:*?"<>|]/g, "") + "." + format;
+    await sock.sendMessage(
+      jid,
+      {
+        [format === "mp3" ? "audio" : "video"]: { url: data.url },
+        mimetype: format === "mp3" ? "audio/mpeg" : "video/mp4",
+        fileName,
+      },
+      { quoted: msg }
+    );
+  } catch (err) {
+    return sendError(sock, jid, err, msg);
+  }
+};
+
+// ─── Message Router ───────────────────────
+const mediaHandler = async (msg, sock) => {
+  const body = msg.body || "";
+  const command = body.startsWith(PREFIX)
+    ? body.slice(PREFIX.length).split(" ")[0].toLowerCase()
+    : "";
+
+  if (["play", "music", "song", "mp3", "mp3doc"].includes(command))
+    return handleMediaCommand(msg, sock, "mp3");
+
+  if (["video", "vid", "movie", "mp4"].includes(command))
+    return handleMediaCommand(msg, sock, "mp4");
+};
+
+// ─── Exports ──────────────────────────────
+export const aliases = ["play", "song", "music", "mp3", "mp3doc", "video", "vid", "mp4", "movie"];
+export default mediaHandler;
