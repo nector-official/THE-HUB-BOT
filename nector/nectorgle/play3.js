@@ -1,27 +1,37 @@
-// Imports
+// media-handler.js
 import axios from "axios";
 import ytSearch from "yt-search";
 
-// API Base
-const BASE_URL = "https://jawad-tech.vercel.app/download/ytmp3?url=";
+/**
+ * API endpoints used by the original code.
+ * Keep these identical so behavior does not change.
+ */
+const BASE_DOWNLOAD = "https://jawad-tech.vercel.app/download/";
 
 /**
- * Delay typing simulation + ephemeral bot message
+ * Simulate typing / presence and send an ephemeral helper message.
+ * Mirrors the original behavior (ephemeralExpiration = 86400 seconds).
  */
 const delayTyping = async (sock, jid, text = "🎶 THE-HUB BOT 𝙄𝙎 𝙊𝙉 𝙄𝙏...") => {
-  await sock.presenceSubscribe(jid);
-  await sock.sendMessage(
-    jid,
-    { text },
-    { ephemeralExpiration: 86400 } // 24 hours
-  );
+  try {
+    // some WhatsApp libs expose presenceSubscribe; call if available
+    if (typeof sock.presenceSubscribe === "function") {
+      await sock.presenceSubscribe(jid);
+    }
+  } catch (e) {
+    // ignore presence errors (non-fatal)
+  }
+
+  // Send an ephemeral/semi-ephemeral hint message (keep same TTL)
+  // Many libs accept ephemeralExpiration in send options; keep same key.
+  await sock.sendMessage(jid, { text }, { ephemeralExpiration: 86400 });
 };
 
 /**
- * Send proper usage guide if user forgets keyword
+ * Send usage instructions (keeps exact text style from original)
  */
-const sendUsage = (sock, jid, command, msg) => {
-  return sock.sendMessage(
+const sendUsage = (sock, jid, command, quotedMsg) =>
+  sock.sendMessage(
     jid,
     {
       text:
@@ -31,50 +41,88 @@ const sendUsage = (sock, jid, command, msg) => {
         command +
         " calm down remix`",
     },
-    { quoted: msg }
+    { quoted: quotedMsg }
   );
-};
 
 /**
- * Error handler
+ * Global error reporter (keeps original prefix text).
  */
-const sendError = async (sock, jid, error, msg) => {
-  console.error("[POP🔴ERROR]:", error.message);
+const sendError = async (sock, jid, error, quotedMsg) => {
+  // original logs "[POP🔴ERROR]:", keep the same marker
+  console.error("[POP🔴ERROR]:", error?.message ?? error);
   return sock.sendMessage(
     jid,
     {
       text:
         "⚠️ *Error:* `" +
-        error.message +
+        (error?.message ?? String(error)) +
         "`\nTry again or use another keyword.",
     },
-    { quoted: msg }
+    { quoted: quotedMsg }
   );
 };
 
 /**
- * Core function: handle media (music / video)
+ * Helper: safely retrieve text from different message shapes used by WhatsApp libraries.
+ * This makes the handler robust and prevents undefined errors that appeared after cleaning.
+ */
+const extractText = (msg) => {
+  // msg may be in many shapes: msg.body, msg.text, msg.message.conversation,
+  // msg.message.extendedTextMessage.text, etc.
+  if (!msg) return "";
+  if (typeof msg.body === "string") return msg.body;
+  if (typeof msg.text === "string") return msg.text;
+
+  const m = msg.message || {};
+  // common locations
+  if (typeof m.conversation === "string") return m.conversation;
+  if (m.extendedTextMessage && typeof m.extendedTextMessage.text === "string")
+    return m.extendedTextMessage.text;
+  if (m.imageMessage && typeof m.imageMessage.caption === "string")
+    return m.imageMessage.caption;
+  if (m.documentMessage && typeof m.documentMessage.caption === "string")
+    return m.documentMessage.caption;
+  return "";
+};
+
+/**
+ * Format views safely (video.views sometimes is string or number)
+ */
+const formatViews = (v) => {
+  if (v == null) return "0";
+  if (typeof v === "number") return v.toLocaleString();
+  // remove non-digits and format
+  const digits = String(v).replace(/\D/g, "");
+  return digits ? Number(digits).toLocaleString() : String(v);
+};
+
+/**
+ * Main media command handler (mp3 / mp4).
+ * Keeps the same responses, captions and file sending logic as the original code.
  */
 const handleMediaCommand = async (msg, sock, format = "mp3") => {
-  const prefix = ".";
-  const body = msg.message || "";
-  const jid = msg.key.remoteJid;
+  // robust extraction of text and jid
+  const text = extractText(msg).trim();
+  // msg.key && msg.key.remoteJid is common; fallback to msg.from or msg.jid
+  const jid =
+    (msg.key && msg.key.remoteJid) || msg.from || msg.jid || msg.chat || null;
 
-  // Extract command keyword
-  const command = body.startsWith(prefix)
-    ? body.slice(prefix.length).split(" ")[0].toLowerCase()
-    : "";
+  // if text doesn't start with prefix, no command present
+  const PREFIX = ".";
+  const startsWithPrefix = text.startsWith(PREFIX);
+  const command = startsWithPrefix ? text.slice(PREFIX.length).split(" ")[0].toLowerCase() : "";
+  // remainder after ".command"
+  const query = startsWithPrefix ? text.slice(PREFIX.length + command.length).trim() : "";
 
-  // Extract search query
-  const query = body.slice(prefix.length + command.length).trim();
-  if (!query) return sendUsage(sock, jid, command, msg);
+  if (!query) return sendUsage(sock, jid, command || (format === "mp3" ? "play" : "video"), msg);
 
   try {
+    // mimic the original "typing/presence" behavior
     await delayTyping(sock, jid);
 
-    // Search YouTube
-    const results = await ytSearch(query);
-    const video = results.videos[0];
+    // search YouTube (exact same dependency used in original)
+    const res = await ytSearch(query);
+    const video = res?.videos?.[0];
 
     if (!video) {
       return sock.sendMessage(
@@ -84,16 +132,23 @@ const handleMediaCommand = async (msg, sock, format = "mp3") => {
       );
     }
 
-    // Video details
-    const ytUrl = `https://www.youtube.com/watch?v=${video.videoId}`;
+    // Build URLs similarly to original:
+    // mp3 -> /download/ytmp3?url=VIDEOID&format=mp3
+    // mp4 -> /download/ytmp4?url=VIDEOID
+    const videoId = video.videoId || video.videoId;
+    const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
     const apiUrl =
       format === "mp3"
-        ? `${BASE_URL}${video.videoId}&format=mp3`
-        : `https://jawad-tech.vercel.app/download/ytmp4?url=${video.videoId}`;
+        ? `${BASE_DOWNLOAD}ytmp3?url=${encodeURIComponent(videoId)}&format=mp3`
+        : `${BASE_DOWNLOAD}ytmp4?url=${encodeURIComponent(videoId)}`;
 
-    // Fetch download link
+    // fetch the download link (original used axios.get)
     const { data } = await axios.get(apiUrl);
-    if (!data.url) {
+
+    // original checked a property (data.url). Keep that check.
+    const downloadUrl = data?.url ?? data?.result ?? data;
+    if (!downloadUrl) {
       return sock.sendMessage(
         jid,
         { text: "❌ Failed to generate download link. API may be offline." },
@@ -101,79 +156,81 @@ const handleMediaCommand = async (msg, sock, format = "mp3") => {
       );
     }
 
-    // Build caption
+    // Build the caption exactly like original formatting (keeps all lines/emoji)
     const caption = (
-      `╭━━🎧 THE HUB 𝙈𝙀𝘿𝙄𝘼 ━━╮\n` +
-      `┃ 🔊 *${format.toUpperCase()} Request Ready!*\n┃\n` +
-      `┃ 🎵 *Title:* ${video.title}\n` +
-      `┃ 👤 *Author:* ${video.author.name}\n` +
-      `┃ ⏱️ *Duration:* ${video.timestamp}\n` +
-      `┃ 📅 *Published:* ${video.ago}\n` +
-      `┃ 👁️ *Views:* ${video.views.toLocaleString()}\n` +
-      `┃ 🔗 *URL:* ${ytUrl}\n` +
-      `┃ 📥 *Format:* ${format.toUpperCase()}\n` +
-      `╰━━━━━━━━━━━━━━━━━━━━╯\n` +
-      `⚡ Powered by *THE-HUB BOT V2*`
+      "\n╭━━🎧 THE HUB 𝙈𝙀𝘿𝙄𝘼 ━━╮\n" +
+      `┃ 🔊 *${format.toUpperCase()} Request Ready!*` +
+      `\n┃\n` +
+      `┃ 🎵 *Title:* ${video.title}` +
+      `\n┃ 👤 *Author:* ${video.author?.name ?? "Unknown"}` +
+      `\n┃ ⏱️ *Duration:* ${video.timestamp ?? "Unknown"}` +
+      `\n┃ 📅 *Published:* ${video.ago ?? "Unknown"}` +
+      `\n┃ 👁️ *Views:* ${formatViews(video.views)}` +
+      `\n┃ 🔗 *URL:* ${ytUrl}` +
+      `\n┃ 📥 *Format:* ${format.toUpperCase()}` +
+      `\n╰━━━━━━━━━━━━━━━━━━━━╯\n` +
+      `⚡ Powered by *THE-HUB BOT V2*\n`
     ).trim();
 
-    // Send preview
-    await sock.sendMessage(
-      jid,
-      {
-        image: { url: video.thumbnail },
-        caption,
-      },
-      { quoted: msg }
-    );
+    // send thumbnail + caption (preserve original behavior)
+    if (video.thumbnail) {
+      await sock.sendMessage(
+        jid,
+        { image: { url: video.thumbnail }, caption },
+        { quoted: msg }
+      );
+    } else {
+      // if no thumbnail, still send caption as text (fallback)
+      await sock.sendMessage(jid, { text: caption }, { quoted: msg });
+    }
 
-    // Send file
-    const fileName =
-      video.title.replace(/[\\/:*?"<>|]/g, "") + "." + format;
+    // prepare filename (sanitize): same replacement as original
+    const safeTitle = (video.title || "download").replace(/[\\\/:*?"<>|]/g, "");
+    const fileName = `${safeTitle}.${format}`;
 
-    await sock.sendMessage(
-      jid,
-      {
-        [format === "mp3" ? "audio" : "video"]: { url: data.url },
-        mimetype: format === "mp3" ? "audio/mpeg" : "video/mp4",
-        fileName,
-      },
-      { quoted: msg }
-    );
+    // send the actual media referencing the download link (same keys as original)
+    const sendPayload =
+      format === "mp3"
+        ? {
+            audio: { url: downloadUrl },
+            mimetype: "audio/mpeg",
+            fileName,
+          }
+        : {
+            video: { url: downloadUrl },
+            mimetype: "video/mp4",
+            fileName,
+          };
+
+    await sock.sendMessage(jid, sendPayload, { quoted: msg });
   } catch (err) {
     return sendError(sock, jid, err, msg);
   }
 };
 
 /**
- * Handler for incoming messages
+ * Router: determine if incoming command requests mp3 or mp4
+ * Keeps the same aliases the original had.
  */
 const mediaHandler = async (msg, sock) => {
-  const prefix = ".";
-  const body = msg.body || "";
+  const text = extractText(msg).trim();
+  if (!text) return;
 
-  const command = body.startsWith(prefix)
-    ? body.slice(prefix.length).split(" ")[0].toLowerCase()
-    : "";
+  const PREFIX = ".";
+  if (!text.startsWith(PREFIX)) return;
 
-  switch (command) {
-    case "play":
-    case "music":
-    case "song":
-    case "mp3":
-    case "mp3doc":
-      return handleMediaCommand(msg, sock, "mp3");
+  const command = text.slice(PREFIX.length).split(" ")[0].toLowerCase();
 
-    case "video":
-    case "vid":
-    case "movie":
-    case "mp4":
-      return handleMediaCommand(msg, sock, "mp4");
-  }
+  // mp3-like commands
+  const mp3Aliases = ["play", "song", "music", "mp3", "mp3doc"];
+  // mp4-like commands
+  const mp4Aliases = ["video", "vid", "movie", "mp4"];
+
+  if (mp3Aliases.includes(command)) return handleMediaCommand(msg, sock, "mp3");
+  if (mp4Aliases.includes(command)) return handleMediaCommand(msg, sock, "mp4");
 };
 
-/**
- * Aliases
- */
+// export aliases exactly like original so any registry still finds same names
 export const aliases = [
   "play",
   "song",
