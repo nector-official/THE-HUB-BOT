@@ -201,26 +201,10 @@ async function start() {
           // ---------- Auto features triggered on startup (respecting config flags) ----------
           // ALWAYS_ONLINE -> send periodic 'available' presence
           if (config.ALWAYS_ONLINE && !presenceInterval) {
-            try {
-              // start a presence heartbeat; use explicit bot JID when available
-              presenceInterval = setInterval(async () => {
-                try {
-                  const botJid = sock?.user?.id || undefined;
-                  if (botJid) {
-                    await sock.sendPresenceUpdate('available', botJid);
-                  } else {
-                    await sock.sendPresenceUpdate('available');
-                  }
-                  // minimal logging: only log on errors to avoid log bloat
-                } catch (err) {
-                  console.error('[AlwaysOnline] Presence error:', err?.message || err);
-                }
-              }, 10_000);
-              console.log('[Auto] ALWAYS_ONLINE enabled');
-            } catch (err) {
-              console.error('[AlwaysOnline] Init error:', err?.message || err);
-            }
-          } catch (err) {
+            presenceInterval = setInterval(async () => {
+              try {
+                await sock.sendPresenceUpdate('available');
+              } catch (err) {
                 // ignore transient errors
               }
             }, 10_000);
@@ -238,26 +222,10 @@ async function start() {
 
           // Ensure auto features on reconnect
           if (config.ALWAYS_ONLINE && !presenceInterval) {
-            try {
-              // start a presence heartbeat; use explicit bot JID when available
-              presenceInterval = setInterval(async () => {
-                try {
-                  const botJid = sock?.user?.id || undefined;
-                  if (botJid) {
-                    await sock.sendPresenceUpdate('available', botJid);
-                  } else {
-                    await sock.sendPresenceUpdate('available');
-                  }
-                  // minimal logging: only log on errors to avoid log bloat
-                } catch (err) {
-                  console.error('[AlwaysOnline] Presence error:', err?.message || err);
-                }
-              }, 10_000);
-              console.log('[Auto] ALWAYS_ONLINE enabled');
-            } catch (err) {
-              console.error('[AlwaysOnline] Init error:', err?.message || err);
-            }
-          } catch (err) {}
+            presenceInterval = setInterval(async () => {
+              try {
+                await sock.sendPresenceUpdate('available');
+              } catch (err) {}
             }, 10_000);
           }
           if (config.AUTO_BIO && !autobioInterval) startAutoBio(sock);
