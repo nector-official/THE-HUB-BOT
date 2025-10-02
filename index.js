@@ -199,17 +199,21 @@ async function start() {
           }
 
           // ---------- Auto features triggered on startup (respecting config flags) ----------
-          // ALWAYS_ONLINE -> send periodic 'available' presence
-          if (config.ALWAYS_ONLINE && !presenceInterval) {
-            presenceInterval = setInterval(async () => {
-              try {
-                await sock.sendPresenceUpdate('available');
-              } catch (err) {
-                // ignore transient errors
-              }
-            }, 10_000);
-            console.log('[Auto] ALWAYS_ONLINE enabled (presence heartbeat every 10s)');
-          }
+          // 🔄 Always Online Handler
+          if (config.ALWAYS_ONLINE) {
+  console.log("[Auto] ALWAYS_ONLINE enabled (presence heartbeat every 10s)");
+
+  setInterval(async () => {
+    try {
+      const botNumber = await Matrix.decodeJid(Matrix.user.id);
+      await Matrix.sendPresenceUpdate("available", botNumber);
+      console.log("[AlwaysOnline] Sent presence update ✅");
+    } catch (err) {
+      console.error("[AlwaysOnline] Error:", err);
+    }
+  }, 10000);
+}
+
 
           // AUTO_BIO -> start auto-bio loop
           if (config.AUTO_BIO) {
