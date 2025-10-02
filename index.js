@@ -35,6 +35,10 @@ if (!fs.existsSync(sessionDir)) fs.mkdirSync(sessionDir, { recursive: true });
 let useQR = false;
 let initialConnection = true;
 
+// Auto feature intervals / guards (so we don't start duplicates on reconnect)
+let presenceInterval = null; // for ALWAYS_ONLINE
+let autobioInterval = null;  // for AUTO_BIO
+
 // Logger
 const MAIN_LOGGER = pino({
   timestamp: () => ',"time":"' + new Date().toJSON() + '"'
@@ -54,7 +58,6 @@ async function downloadSessionData() {
     }
 
     // Your SESSION_ID format used previously: prefix~<fileId>#<key>
-    // e.g. "nector~N9pBTIxL#Jg9DoCw..."
     const parts = config.SESSION_ID.split('~')[1];
     if (!parts || !parts.includes('#')) {
       console.error('❌ Invalid SESSION_ID format! It must contain both file ID and decryption key.');
@@ -82,6 +85,55 @@ async function downloadSessionData() {
   }
 }
 
+// ------------------ AutoBio helpers (self-contained so index.js doesn't depend on other file paths) ------------------
+const AUTO_BIO_QUOTE_POOL = [
+  "🚀 Keep pushing forward!",
+  "🌟 You're capable of amazing things.",
+  "💡 Progress, not perfection.",
+  "📌 Focus on the step in front of you.",
+  "✨ Powered by THE-HUB-BOT",
+  "🎯 Keep grinding. The bot never sleeps.",
+  "🤖 Auto Bio is watching 👀",
+  "⚡ Be the storm, not the breeze."
+];
+
+async function fetchRandomAutoBioQuote() {
+  // try API first, fallback to local pool
+  try {
+    const res = await axios.get('https://zenquotes.io/api/random', { timeout: 5000 });
+    if (res.data && res.data[0]?.q && res.data[0]?.a) {
+      return `💬 ${res.data[0].q} — ${res.data[0].a}`;
+    }
+  } catch (err) {
+    // swallow — we'll fallback to local quotes
+    // console.error('[AutoBio] ZenQuotes error:', err?.message || err);
+  }
+  return AUTO_BIO_QUOTE_POOL[Math.floor(Math.random() * AUTO_BIO_QUOTE_POOL.length)];
+}
+
+function startAutoBio(Matrix) {
+  if (autobioInterval) return; // already running
+  console.log('[AutoBio] Starting auto-bio...');
+  autobioInterval = setInterval(async () => {
+    try {
+      const quote = await fetchRandomAutoBioQuote();
+      await Matrix.updateProfileStatus(quote);
+      console.log(`[AutoBio] Bio updated to: ${quote}`);
+    } catch (err) {
+      console.error('[AutoBio] Error updating bio:', err?.message || err);
+    }
+  }, 60 * 1000);
+}
+
+function stopAutoBio() {
+  if (autobioInterval) {
+    clearInterval(autobioInterval);
+    autobioInterval = null;
+    console.log('[AutoBio] Stopped auto-bio.');
+  }
+}
+
+// ------------------ START SOCKET ------------------
 async function start() {
   try {
     // load auth state (creates files under sessionDir)
@@ -116,6 +168,13 @@ async function start() {
     sock.ev.on('connection.update', async update => {
       const { connection, lastDisconnect } = update;
       if (connection === 'close') {
+        // clear auto intervals/listeners to avoid duplicate behavior on reconnect
+        if (presenceInterval) {
+          clearInterval(presenceInterval);
+          presenceInterval = null;
+        }
+        stopAutoBio();
+
         // reconnect unless logged out
         const shouldReconnect =
           lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
@@ -139,9 +198,37 @@ async function start() {
             console.error('❌ Failed to send startup message:', e?.message ?? e);
           }
 
+          // ---------- Auto features triggered on startup (respecting config flags) ----------
+          // ALWAYS_ONLINE -> send periodic 'available' presence
+          if (config.ALWAYS_ONLINE && !presenceInterval) {
+            presenceInterval = setInterval(async () => {
+              try {
+                await sock.sendPresenceUpdate('available');
+              } catch (err) {
+                // ignore transient errors
+              }
+            }, 10_000);
+            console.log('[Auto] ALWAYS_ONLINE enabled (presence heartbeat every 10s)');
+          }
+
+          // AUTO_BIO -> start auto-bio loop
+          if (config.AUTO_BIO) {
+            startAutoBio(sock);
+          }
+
           initialConnection = false;
         } else {
           console.log('♻️ Connection re-established after restart.');
+
+          // Ensure auto features on reconnect
+          if (config.ALWAYS_ONLINE && !presenceInterval) {
+            presenceInterval = setInterval(async () => {
+              try {
+                await sock.sendPresenceUpdate('available');
+              } catch (err) {}
+            }, 10_000);
+          }
+          if (config.AUTO_BIO && !autobioInterval) startAutoBio(sock);
         }
       }
     });
@@ -152,8 +239,40 @@ async function start() {
         // first, let your custom Handler process it (commands, responses etc)
         Handler(m, sock, MAIN_LOGGER);
 
-        // then (like original) run autoreact if enabled and message is not from me
+        // then run auto features per incoming message (if applicable)
         const msg = m.messages?.[0];
+
+        if (msg && !msg.key?.fromMe) {
+          // Auto-typing / Auto-recording presence
+          try {
+            if (config.AUTO_RECORDING) {
+              // give priority to recording if both enabled
+              await sock.sendPresenceUpdate('recording', msg.key.remoteJid);
+            } else if (config.AUTO_TYPING) {
+              await sock.sendPresenceUpdate('composing', msg.key.remoteJid);
+            }
+          } catch (err) {
+            // ignore presence errors
+          }
+
+          // Auto status view (when a status/broadcast update arrives)
+          try {
+            if (config.AUTO_STATUS_SEEN && msg.key.remoteJid === 'status@broadcast') {
+              // readMessages may or may not be available depending on Baileys version
+              if (typeof sock.readMessages === 'function') {
+                await sock.readMessages([msg.key]);
+              } else if (typeof sock.readMessage === 'function') {
+                await sock.readMessage(msg.key);
+              } else {
+                // best-effort: do nothing if function missing
+              }
+            }
+          } catch (err) {
+            // ignore
+          }
+        }
+
+        // then (like original) run autoreact if enabled and message is not from me
         if (
           msg &&
           !msg.key?.fromMe &&
@@ -214,5 +333,3 @@ init().catch(err => {
   console.error('Init failed:', err);
   process.exit(1);
 });
-
-
