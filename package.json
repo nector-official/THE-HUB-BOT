@@ -5,12 +5,11 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node index.js",
-    "postinstall": "npm i @whiskeysockets/baileys@6.6.0 --no-audit --no-fund"
+    "start": "node index.js"
   },
   "engines": {
     "node": "20.x",
-    "npm": "9.x"
+    "npm": ">=9.0.0"
   },
   "keywords": ["NECTOR-SRT", "whatsapp-bot", "whatsapp md bot"],
   "author": "THE-HUB-BOT",
