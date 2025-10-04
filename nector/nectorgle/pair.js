@@ -1,56 +1,62 @@
+// session-detect.js  (debug only)
 import axios from 'axios';
 import config from '../../config.cjs';
 
-const sessionGen = async (m, Matrix) => {
+const sessionDetect = async (m, Matrix) => {
   try {
-    // ✅ Detect command name and args
     const command = m.body.startsWith(config.PREFIX)
       ? m.body.slice(config.PREFIX.length).split(' ')[0].toLowerCase()
       : '';
+    if (!['sessiontest', 'pair'].includes(command)) return;
+
     const args = m.body.slice(config.PREFIX.length + command.length).trim();
-
-    // ✅ Only run for your chosen command trigger
-    if (!["session", "gensession"].includes(command)) return;
-
-    // ✅ React while processing
-    await Matrix.sendMessage(m.from, { react: { text: "⏳", key: m.key } });
-
-    // ✅ Require phone number
-    if (!args) {
-      return m.reply(
-        "📱 *Please provide your phone number.*\n\nExample:\n" +
-        "`" + config.PREFIX + command + " 254712345678`"
-      );
-    }
+    if (!args) return return m.reply('Usage: ' + config.PREFIX + command + ' <phone>');
 
     const phone = args.trim();
-    console.log("[SessionGen] Phone:", phone);
+    const base = 'https://pair-nector-session.onrender.com';
+    const candidates = [
+      `/session/${phone}`,
+      `/api/session?phone=${phone}`,
+      `/gen?phone=${phone}`,
+      `/create-session?phone=${phone}`,
+      `/pair?phone=${phone}`,
+      `/api/pair?number=${phone}`,
+      `/api/pair?phone=${phone}`,
+      `/pair/${phone}`,
+      `/create/${phone}`,
+      `/api/create?phone=${phone}`,
+      `/v1/session?phone=${phone}`,
+    ];
 
-    // ✅ Request to your Render API (check that this URL matches your working one)
-    const apiURL = `https://nector-session.onrender.com/session/${encodeURIComponent(phone)}`;
-    console.log("[SessionGen] Requesting:", apiURL);
+    await Matrix.sendMessage(m.from, { text: `🔎 Starting endpoint discovery against ${base} ...` });
 
-    const response = await axios.get(apiURL);
-
-    console.log("[SessionGen] Raw response:", response.data);
-
-    const { code } = response.data || {};
-
-    // ✅ Validate code
-    if (!code) {
-      console.warn("[SessionGen] Missing code field in response");
-      throw new Error("No 'code' field returned from API.");
+    for (const path of candidates) {
+      const url = base + path;
+      console.log('[SessionDetect] Trying', url);
+      try {
+        const r = await axios.get(url, { timeout: 8000, validateStatus: () => true });
+        console.log('[SessionDetect] Status', r.status, 'URL', url, 'Body:', r.data);
+        // If status 200 and has code-like property
+        if (r.status === 200 && r.data && (r.data.code || r.data?.result || r.data?.session)) {
+          const code = r.data.code || r.data.result || r.data.session;
+          await Matrix.sendMessage(m.from, {
+            text: `✅ Found working endpoint:\nURL: ${url}\nStatus: ${r.status}\nReturned: ${JSON.stringify(r.data)}\n\nUse this path in your real session command.`
+          }, { quoted: m });
+          return;
+        }
+      } catch (innerErr) {
+        console.warn('[SessionDetect] Error for', url, innerErr.message);
+      }
+      // small delay to avoid hammering
+      await new Promise(r => setTimeout(r, 350));
     }
 
-    // ✅ Build success message
-    const msg = `✅ *Session Generated Successfully!*\n\n📞 Number: ${phone}\n🔑 Code: ${code}\n\n⚙️ Use this code in your bot setup.`;
+    await Matrix.sendMessage(m.from, { text: '❌ No working endpoint found in candidate list. Check render logs or give me the axios.get line from original code.' }, { quoted: m });
 
-    await Matrix.sendMessage(m.from, { text: msg }, { quoted: m });
-
-  } catch (error) {
-    console.error("SessionGen Error:", error);
-    await m.reply(`⚠️ *Error generating session.*\n\n🧩 Details: ${error.message || error}`);
+  } catch (err) {
+    console.error('SessionDetect Error', err);
+    await m.reply('Error running detection: ' + (err.message || err));
   }
 };
 
-export default sessionGen;
+export default sessionDetect;
