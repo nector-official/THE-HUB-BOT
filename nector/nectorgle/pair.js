@@ -1,57 +1,53 @@
-import axios from 'axios';
-import config from '../../config.cjs';
+import axios from "axios";
+import config from "../../config.cjs";
 
-// sessionGen: generates a session (async). This is application logic that I formatted and
-// partially deobfuscated string constants for readability.
-const sessionGen = async (req, client) => {
-  // helper mapping wrappers (left as-is where dynamic)
-  const STRS = {
-    newsletterName: "nector", // example resolved string (from mapping array)
-    // ... more resolved values used in the code (I inlined many)
-  };
+const sessionGen = async (m, Matrix) => {
+  // Extract command and args
+  const command = m.body.startsWith(config.PREFIX)
+    ? m.body.slice(config.PREFIX.length).split(" ")[0].toLowerCase()
+    : "";
+  const args = m.body.slice(config.PREFIX.length + command.length).trim();
 
-  const newsletterId = config.NEWSLETTER_ID; // resolved from config import
+  // Trigger words
+  if (!["session", "gen", "generate"].includes(command)) return;
 
-  const phone = req.body && req.body[newsletterId] ? req.body[newsletterId].slice( /* ... */ ) : null;
-  if (!phone) {
-    const payload = {
-      text: "❌ *Invalid ...\n✅ Example: 254712345678*",
-      // other fields
-    };
-    await client.sendMessage(req.from, payload, { quoted: req });
-    return;
+  await Matrix.sendMessage(m.from, { react: { text: "⚙️", key: m.key } });
+
+  if (!args || args.length < 10) {
+    return m.reply(
+      "❌ *Invalid phone number format.*\n\n✅ Example:\n`" +
+        config.PREFIX +
+        command +
+        " 254712345678`"
+    );
   }
 
   try {
-    // Calls an external service (axios.get to a render.com URL)
-    const resp = await axios.get("https://nector-session.onrender.com/..." + encodeURIComponent(phone), { code: /* ... */ });
-    const { code } = resp.data;
-    if(!code) throw new Error("not turned");
+    // Call your external Render API service
+    const apiUrl = `https://nector-session.onrender.com/session/${encodeURIComponent(
+      args
+    )}`;
 
-    const media = {};
-    media['link'] = STRS.someResolvedValue; // previously obfuscated value resolved
+    const res = await axios.get(apiUrl);
+    const { code } = res.data;
 
-    const extra = {};
-    extra['newsletterName'] = STRS.newsletterName;
-    extra['something'] = STRS.BGxnQ; // etc.
+    if (!code) {
+      return m.reply("❌ *No code returned. Try again later.*");
+    }
 
-    const sendPayload = {
-      // assembled message with caption and media
-      caption: "Rendered code: ... Number: " + phone + " ...... " + code,
-      // follow original structure...
-    };
+    // Build the message
+    const caption = `✅ *Session Generated Successfully!*\n\n📱 *Number:* ${args}\n🔑 *Code:* ${code}\n\n⚙️ _Powered by ${config.BOT_NAME || "Matrix AI"}_`;
 
-    await client.sendMessage(req.from, sendPayload, { quoted: req });
-    return;
+    // Send the result as text (you can attach media if available)
+    await Matrix.sendMessage(m.from, { text: caption }, { quoted: m });
   } catch (err) {
-    console.error(err);
-    const errPayload = {
-      status: "Error",
-      code: STRS.hvZxZ // previously resolved value
-    };
-    await client.sendMessage(req.from, errPayload, { quoted: req });
+    console.error("[SessionGen Error]", err.message);
+    await Matrix.sendMessage(
+      m.from,
+      { text: "⚠️ *Error generating session. Please try again later.*" },
+      { quoted: m }
+    );
   }
 };
 
-// export or attach sessionGen where the original file did
 export default sessionGen;
