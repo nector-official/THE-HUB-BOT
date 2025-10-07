@@ -2,7 +2,7 @@ const fs = require("fs");
 
 const config = {
   // 🧠 Session & Identity
-  SESSION_ID: "nector~hl5inTQR#HWYGhAu6tdGxECRLJ7PC98FU1BHIlSYMu_atbuDi4AQ",
+  SESSION_ID: "nector~45oEkRQb#RdmwwTg01TT7i-quTNV-wNr4BolVga3j7gWqMXsgrUM",
   PREFIX: ".",
   BOT_NAME: "THE-HUB-BOT",
   BOT: "hello 👋",
@@ -17,7 +17,7 @@ const config = {
 
   // 🔧 Auto features (hardcoded defaults)
   AUTO_STATUS_SEEN: true,      // Auto view statuses ON
-  AUTO_BIO: true,             // Auto bio OFF
+  AUTO_BIO: false,             // Auto bio OFF
   AUTO_STATUS_REACT: false,    // Auto react OFF
   AUTO_REPLY_STATUS: false,    // Auto reply OFF
   AUTO_STICKER: false,         // Auto sticker OFF
