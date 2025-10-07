@@ -43,7 +43,7 @@ const startAutoBio = (sock) => {
     } catch (err) {
       console.error("❌ [AutoBio Failed]", err.message);
     }
-  }, 1 * 60 * 1000); // update every 1 minutes (safer)
+  }, 1 * 3600 * 1000); // update every 1 hour (safer)
 };
 
 const stopAutoBio = () => {
@@ -67,7 +67,7 @@ const autobioCommand = async (m, sock) => {
   if (arg === "on") {
     if (autobioInterval) return m.reply("✅ *Auto Bio is already running.*");
     startAutoBio(sock);
-    return m.reply("🚀 *Auto Bio started!* Bio will change every 1 minutes.");
+    return m.reply("🚀 *Auto Bio started!* Bio will change every 1 hour.");
   }
 
   if (arg === "off") {
