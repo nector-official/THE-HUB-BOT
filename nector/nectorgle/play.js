@@ -1,103 +1,67 @@
-import axios from 'axios';
 import yts from 'yt-search';
-import ffmpeg from 'fluent-ffmpeg';
-import fs from 'fs';
-import path from 'path';
-import fetch from 'node-fetch';
+import axios from 'axios';
 import config from '../../config.cjs';
 
 const playCommand = async (m, Matrix) => {
-  const botNumber = await Matrix.decodeJid(Matrix.user.id);
-  const isOwner = [botNumber, `${config.OWNER_NUMBER}@s.whatsapp.net`].includes(m.sender);
-  const prefix = config.PREFIX;
-
-  const command = m.body.startsWith(prefix)
-    ? m.body.slice(prefix.length).split(' ')[0].toLowerCase()
+  const command = m.body.startsWith(config.PREFIX)
+    ? m.body.slice(config.PREFIX.length).split(' ')[0].toLowerCase()
     : '';
+  const args = m.body.slice(config.PREFIX.length + command.length).trim();
 
-  const args = m.body.slice(prefix.length + command.length).trim();
+  // ✅ Multiple trigger words
+  if (!["play", "song", "music", "mp3"].includes(command)) return;
 
-  // ✅ Add aliases here
-  const playAliases = ['play', 'hit', 'music', 'song', 'beats'];
+  await Matrix.sendMessage(m.from, { react: { text: "🎧", key: m.key } });
 
-  if (!playAliases.includes(command)) return;
-
-  if (!args && !m.quoted) {
-    return m.reply("❓ What song or URL do you want to download?\nYou can also reply to a message with a URL.");
+  if (!args) {
+    return m.reply(
+      "❌ *Please provide a song name!*\n\nExample:\n" +
+      "`" + config.PREFIX + command + " despacito`"
+    );
   }
 
-  const url = args || (m.quoted && m.quoted.text);
-  const isAudio = !args.includes("video");
-
   try {
-    let linkMatch = url.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/]+\/[^\/]+\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-    let title, thumbnail, duration, videoUrl;
-
-    await Matrix.sendMessage(m.from, { text: "🔍 Searching for the song, please wait..." }, { quoted: m });
-
-    if (linkMatch) {
-      const videoDetails = await yts(linkMatch[0]);
-      const result = videoDetails.all[0];
-      title = result.title;
-      thumbnail = result.thumbnail;
-      duration = result.duration.timestamp;
-      videoUrl = linkMatch[0];
-    } else {
-      const search = await yts(url);
-      if (!search.all.length) return m.reply("❌ No results found for your search.");
-      const result = search.all[0];
-      title = result.title;
-      thumbnail = result.thumbnail;
-      duration = result.duration.timestamp;
-      videoUrl = result.url;
+    // 🔍 Search YouTube
+    const { videos } = await yts(args);
+    if (!videos || videos.length === 0) {
+      return m.reply("⚠️ *No results found for your query!*");
     }
 
-    const cleanTitle = title.replace(/[^a-zA-Z0-9 ]/g, "");
-    const outputPath = path.join('./', `${cleanTitle}.mp3`);
+    const video = videos[0];
+    const videoUrl = video.url;
 
-    const apis = [
-      `https://yt-dl.officialhectormanuel.workers.dev/?url=${encodeURIComponent(videoUrl)}`,
-      `https://apis.davidcyriltech.my.id/download/ytmp3?url=${videoUrl}`,
-      `https://api.ryzendesu.vip/api/downloader/ytmp3?url=${videoUrl}`,
-      `https://api.dreaded.site/api/ytdl/audio?url=${videoUrl}`
-    ];
+    // 🖼️ Send video info before download
+    await Matrix.sendMessage(m.from, {
+      image: { url: video.thumbnail },
+      caption: `🎵 *${video.title}*\n⏱ Duration: ${video.timestamp}\n👁 Views: ${video.views.toLocaleString()}\n\n⏳ Downloading audio...`
+    }, { quoted: m });
 
-    if (isAudio) {
-      for (const api of apis) {
-        try {
-          const res = await fetch(api);
-          const data = await res.json();
-          if (!(data.status === 200 || data.success)) continue;
+    // 🎧 Fetch audio using the API
+    const apiUrl = `https://yt-dl.officialhectormanuel.workers.dev/?url=${encodeURIComponent(videoUrl)}`;
+    const res = await axios.get(apiUrl);
+    const data = res.data;
 
-          const audioUrl = data.result?.downloadUrl || data.url;
-          if (!audioUrl) continue;
-
-          const stream = await axios({ url: audioUrl, method: "GET", responseType: "stream" });
-          if (stream.status !== 200) continue;
-
-          return ffmpeg(stream.data)
-            .toFormat('mp3')
-            .save(outputPath)
-            .on('end', async () => {
-              await Matrix.sendMessage(m.from, {
-                document: { url: outputPath },
-                mimetype: 'audio/mp3',
-                caption: `🎶 *Title:* ${title}\n⏱️ *Duration:* ${duration}\n\nPowered by ⓃⒺCⓉOR🍯`,
-                fileName: `${cleanTitle}.mp3`,
-                thumbnail: { url: thumbnail },
-              }, { quoted: m });
-              fs.unlinkSync(outputPath);
-            })
-            .on('error', err => m.reply("❌ Download failed\n" + err.message));
-        } catch (err) {
-          continue;
-        }
-      }
-      return m.reply("❌ All APIs failed or are currently down.");
+    if (!data?.status) {
+      return m.reply("🚫 *Failed to fetch audio. Try again later.*");
     }
 
-  } catch (e) {
-    return m.reply("❌ Something went wrong\n" + e.message);
+    const audioUrl = data.audio;
+    const title = data.title || video.title;
+
+    if (!audioUrl) {
+      return m.reply("🚫 *No audio URL found in the response.*");
+    }
+
+    // 🎶 Send audio file
+    await Matrix.sendMessage(m.from, {
+      audio: { url: audioUrl },
+      mimetype: "audio/mpeg",
+      fileName: `${title}.mp3`
+    }, { quoted: m });
+
+  } catch (err) {
+    console.error("[Play Command Error]", err.message);
+    m.reply("❌ *Download failed. Please try again later.*");
   }
 };
 
