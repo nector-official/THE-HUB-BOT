@@ -7,82 +7,52 @@ const chatgptCommand = async (m, Matrix) => {
     : '';
   const args = m.body.slice(config.PREFIX.length + command.length).trim();
 
+  // Command aliases
   if (!["ai", "gpt", "chatgpt"].includes(command)) return;
 
+  // React while processing
   await Matrix.sendMessage(m.from, { react: { text: "🤖", key: m.key } });
 
+  // If no query provided
   if (!args) {
-    return m.reply(
-      "💬 *Please provide a question for the AI.*\n\nExample:\n`" +
-        config.PREFIX +
-        command +
-        " Who discovered gravity?`"
-    );
+    return m.reply(`💬 *Please provide a question for the AI.*\n\nExample:\n\`${config.PREFIX + command} What is the Nile River?\``);
   }
 
-  // List of free APIs (in priority order)
-  const apis = [
-    {
-      name: "Kenlie GPT4",
-      type: "AI",
-      url: (q) => `https://api.kenliejugarap.com/api/gpt4?prompt=${encodeURIComponent(q)}`,
-      extract: (data) => data?.response
-    },
-    {
-      name: "Safone Chatbot",
-      type: "AI",
-      url: (q) => `https://api.safone.co/chatbot?query=${encodeURIComponent(q)}`,
-      extract: (data) => data?.result || data?.response
-    },
-    {
-      name: "Advice Slip",
-      type: "Advice",
-      url: () => `https://api.adviceslip.com/advice`,
-      extract: (data) => data?.slip?.advice
-    },
-    {
-      name: "ZenQuotes",
-      type: "Quote",
-      url: () => `https://zenquotes.io/api/random`,
-      extract: (data) => data?.[0]?.q + " — " + data?.[0]?.a
-    },
-    {
-      name: "Useless Facts",
-      type: "Fact",
-      url: () => `https://uselessfacts.jsph.pl/random.json?language=en`,
-      extract: (data) => data?.text
-    }
-  ];
+  try {
+    let reply;
 
-  let reply = null;
-
-  for (let i = 0; i < apis.length; i++) {
-    const api = apis[i];
+    // ⚙️ Primary API → HectorManuel GPT-4.5
     try {
-      const res = await axios.get(api.url(args), { timeout: 10000 });
-      reply = api.extract(res.data);
-
-      if (reply) {
-        // First API = normal response
-        if (i === 0) {
-          await m.reply(`🤖 *AI Response (from ${api.name}):*\n\n${reply}`);
-        } else {
-          // Show fallback notice
-          await m.reply(
-            `⚠️ *Main AI service is down.*\n` +
-            `Here’s a reply from *${api.type} service* (${api.name}):\n\n${reply}`
-          );
-        }
-        return;
+      const hectorRes = await axios.get(`https://all-in-1-ais.officialhectormanuel.workers.dev/?query=${encodeURIComponent(args)}&model=gpt-4.5`);
+      if (hectorRes.data && hectorRes.data.success && hectorRes.data.message?.content) {
+        reply = hectorRes.data.message.content;
       }
     } catch (err) {
-      console.error(`[${api.name} Error]`, err.message);
-      continue; // try next API
+      console.warn("[Primary API Error]", err.message);
     }
-  }
 
-  // If all fail
-  await m.reply("❌ *All free AI services are unavailable right now. Please try again later.*");
+    // 🔁 Secondary API → Safone fallback
+    if (!reply) {
+      try {
+        const safoneRes = await axios.get(`https://api.safone.co/chatbot?query=${encodeURIComponent(args)}`);
+        reply = safoneRes.data?.result || safoneRes.data?.response;
+      } catch (err) {
+        console.warn("[Safone Fallback Error]", err.message);
+      }
+    }
+
+    // If both APIs fail
+    if (!reply) {
+      return m.reply("❌ *No answer found. Try again later.*");
+    }
+
+    // Send AI response
+    await m.reply(`🤖 *AI Response:*\n\n${reply}`);
+
+  } catch (err) {
+    console.error("[AI Command Error]", err.message);
+    await m.reply("❌ *Error contacting AI service. Try again later.*");
+  }
 };
 
 export default chatgptCommand;
