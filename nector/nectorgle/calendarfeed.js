@@ -16,7 +16,7 @@ const calendarFeedCommand = async (m, Matrix) => {
   await Matrix.sendMessage(m.from, { text: message }, { quoted: m });
 };
 
-// ✅ Function to fetch all data
+// ✅ Function to build the feed
 async function buildCalendarFeed() {
   const today = new Date();
   const dateStr = today.toLocaleDateString("en-KE", {
@@ -26,12 +26,11 @@ async function buildCalendarFeed() {
     day: "numeric",
   });
 
-  // Initialize all variables
   let weather = "Unavailable";
   let quote = "Unavailable";
-  let news = "No news available";
-  let holiday = "No public holiday today";
-  let fact = "No fact available";
+  let news = "No Kenyan news available.";
+  let holiday = "No public holiday today.";
+  let fact = "No fact available.";
 
   // 🌤 Weather
   try {
@@ -51,14 +50,23 @@ async function buildCalendarFeed() {
     console.error("Quote API Error:", err.message);
   }
 
-  // 📰 News
+  // 📰 Kenyan News (filtered + clickable)
   try {
     const res = await axios.get(config.NEWS_API);
-    news =
-      res.data?.results
-        ?.slice(0, 3)
-        ?.map((a, i) => `• ${a.title}`)
-        ?.join("\n") || news;
+    const articles = res.data?.results || [];
+    const filtered = articles.filter(
+      (a) =>
+        a.title &&
+        a.link &&
+        !/bet|celebrity|gossip|football|entertainment|transfer/i.test(a.title)
+    );
+
+    if (filtered.length > 0) {
+      news = filtered
+        .slice(0, 3)
+        .map((a, i) => `• [${a.title}](${a.link})`)
+        .join("\n");
+    }
   } catch (err) {
     console.error("News API Error:", err.message);
   }
@@ -81,14 +89,16 @@ async function buildCalendarFeed() {
     console.error("Fact API Error:", err.message);
   }
 
-  // 📄 Final message
+  // 🗓️ Final message
   const message = `
 🗓️ *Daily Update Feed*
 ━━━━━━━━━━━━━━
 📅 *Date:* ${dateStr}
 🌤️ *Weather:* ${weather}
 🎉 *Holiday Today:* ${holiday}
-📰 *Top News:*\n${news}
+📰 *Top Kenyan News:*
+${news}
+
 💬 *Quote:* ${quote}
 😂 *Fun Fact:* ${fact}
 ━━━━━━━━━━━━━━
@@ -97,21 +107,19 @@ async function buildCalendarFeed() {
   return message;
 }
 
-// ✅ Automatic scheduler — 6 AM Kenya time
+// ✅ Automatic 6 AM schedule (Kenya time)
 cron.schedule(
   "0 6 * * *",
   async () => {
     try {
       const message = await buildCalendarFeed();
       await Matrix.sendMessage(config.OWNER_JID, { text: message });
-      console.log("✅ Daily calendar feed sent automatically at 6 AM Africa/Nairobi time");
+      console.log("✅ Daily calendar feed sent at 6 AM Africa/Nairobi time");
     } catch (err) {
       console.error("Auto CalendarFeed Error:", err.message);
     }
   },
-  {
-    timezone: "Africa/Nairobi",
-  }
+  { timezone: "Africa/Nairobi" }
 );
 
 export default calendarFeedCommand;
