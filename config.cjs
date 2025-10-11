@@ -53,7 +53,7 @@ const config = {
   QUOTE_API: "https://zenquotes.io/api/random",
   WEATHER_API: "https://wttr.in/Nairobi?format=%C+%t", // Simple text weather
   HOLIDAY_API: "https://date.nager.at/api/v3/PublicHolidays",
-  NEWS_API: "https://newsdata.io/api/1/news?apikey=pub_6d7e3fbe8c10459f9414293eb78c7bb1&country=ke,us&language=en",
+  NEWS_API: "https://newsdata.io/api/1/news?apikey=pub_6d7e3fbe8c10459f9414293eb78c7bb1&country=ke&language=en&category=top",
   FACT_API: "https://uselessfacts.jsph.pl/random.json?language=en",
 };
 
