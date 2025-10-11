@@ -1,90 +1,77 @@
-import config from "../../config.cjs";
-import cron from "node-cron";
 import axios from "axios";
+import cron from "node-cron";
+import config from "../../config.cjs";
 
-const calendarFeed = async (m, Matrix) => {
-  // ✅ MANUAL COMMAND MODE (.calendarfeed)
-  const command = m?.body
-    ?.startsWith(config.PREFIX)
+const calendarFeedCommand = async (m, Matrix) => {
+  const command = m.body.startsWith(config.PREFIX)
     ? m.body.slice(config.PREFIX.length).split(" ")[0].toLowerCase()
     : "";
 
-  if (["calendarfeed", "feed", "dailyupdate"].includes(command)) {
-    await Matrix.sendMessage(m.from, { react: { text: "🕒", key: m.key } });
-    await sendCalendarFeed(Matrix, m.from);
-    return;
-  }
+  // ✅ Trigger manually with .calendarfeed
+  if (!["calendarfeed"].includes(command)) return;
 
-  // ✅ AUTOMATIC MODE — runs daily at 6:00 AM Africa/Nairobi time
-  cron.schedule(
-    "0 6 * * *",
-    async () => {
-      await sendCalendarFeed(Matrix, config.OWNER_JID);
-    },
-    {
-      timezone: "Africa/Nairobi",
-    }
-  );
+  await Matrix.sendMessage(m.from, { react: { text: "📰", key: m.key } });
 
-  console.log("⏰ Calendar Feed scheduled for 6:00 AM Africa/Nairobi time");
-};
-
-// 💡 Function that fetches data and sends the daily feed
-async function sendCalendarFeed(Matrix, to) {
   try {
-    const today = new Date();
-    const dateStr = today.toLocaleDateString("en-KE", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    // 🌤 Weather (simple API)
+    const weatherRes = await axios.get(config.WEATHER_API);
+    const weather = weatherRes.data || "Weather data unavailable.";
 
     // 💭 Quote
     const quoteRes = await axios.get(config.QUOTE_API);
-    const quote = quoteRes.data[0]?.q + " — " + quoteRes.data[0]?.a;
+    const quote =
+      quoteRes.data?.[0]?.q && quoteRes.data?.[0]?.a
+        ? `"${quoteRes.data[0].q}" — ${quoteRes.data[0].a}`
+        : "No quote available.";
 
-    // 😂 Fact
-    const factRes = await axios.get(config.FACT_API);
-    const fact = factRes.data?.text;
-
-    // 🌦️ Weather
-    const weatherRes = await axios.get(config.WEATHER_API);
-    const weather = weatherRes.data || "Weather data unavailable";
-
-    // 🗓️ Next Kenyan Holiday
-    const year = today.getFullYear();
-    const holidayRes = await axios.get(`${config.HOLIDAY_API}/${year}/KE`);
-    const upcoming = holidayRes.data.find((h) => new Date(h.date) > today);
-    const nextHoliday = upcoming
-      ? `${upcoming.localName} on ${upcoming.date}`
-      : "No upcoming holidays soon.";
-
-    // 📰 Trending News
+    // 📰 News
     const newsRes = await axios.get(config.NEWS_API);
-    const topNews =
-      newsRes.data?.results?.[0]?.title ||
-      "No trending news found at the moment.";
+    const news = newsRes.data?.results?.slice(0, 3)
+      ?.map((a, i) => `• ${a.title}`)
+      ?.join("\n") || "No trending news at the moment.";
 
-    // 🧾 Format Message
-    const message = `
-🌞 *Good Morning ⓃⒺCⓉOR🍯!*
+    // 🎉 Holiday check (Kenya)
+    const year = new Date().getFullYear();
+    const holidayRes = await axios.get(`${config.HOLIDAY_API}/${year}/KE`);
+    const today = new Date().toISOString().split("T")[0];
+    const todayHoliday =
+      holidayRes.data.find((h) => h.date === today)?.localName ||
+      "No public holiday today.";
 
-🗓️ *Date:* ${dateStr}
-🌤️ *Weather:* ${weather}
-🇰🇪 *Next Holiday:* ${nextHoliday}
-📰 *Trending News:* ${topNews}
-💭 *Quote:* ${quote}
-😂 *Fun Fact:* ${fact}
+    const message = `🗓️ *Daily Update Feed*\n━━━━━━━━━━━━━━━
+🌤 *Weather:* ${weather}
+🎉 *Today:* ${todayHoliday}
+📰 *Top News:*\n${news}
+💬 *Quote:* ${quote}
+━━━━━━━━━━━━━━━
+📅 *Time:* ${new Date().toLocaleString("en-KE", {
+      timeZone: "Africa/Nairobi",
+    })}`;
 
-Have a bright and productive day ahead! 🚀
-`;
-
-    await Matrix.sendMessage(to, { text: message });
-    console.log(`✅ Daily update sent to ${to}`);
+    await Matrix.sendMessage(m.from, { text: message }, { quoted: m });
   } catch (err) {
-    console.error("❌ Error sending daily update:", err.message);
+    console.error("CalendarFeed Error:", err);
+    await m.reply("⚠️ *Error fetching data:* " + err.message);
   }
-}
+};
 
-export default calendarFeed;
+// ✅ Automatic scheduler (Kenya time)
+cron.schedule(
+  "0 6 * * *",
+  async () => {
+    try {
+      const message = `🗓️ *Good Morning!* 🌅\nHere's your daily update:\n\nUse *.calendarfeed* anytime to get the latest updates manually.`;
+      await Matrix.sendMessage(
+        `${config.OWNER_NUMBER}@s.whatsapp.net`,
+        { text: message }
+      );
+    } catch (e) {
+      console.error("Auto CalendarFeed Error:", e.message);
+    }
+  },
+  {
+    timezone: "Africa/Nairobi",
+  }
+);
+
+export default calendarFeedCommand;
