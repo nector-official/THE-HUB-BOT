@@ -3,30 +3,24 @@ const fs = require("fs");
 const config = {
   // 🧠 Session & Identity
   SESSION_ID: "nector~45oEkRQb#RdmwwTg01TT7i-quTNV-wNr4BolVga3j7gWqMXsgrUM",
-  PREFIX: ".",
+  PREFIX: ".", // your command prefix
   BOT_NAME: "THE-HUB-BOT",
   BOT: "hello 👋",
   NEW_CMD: "ᴀᴅᴅᴠᴀʀ\n│ sᴜᴅᴏ\n| nector",
   CAPTION: "ᴘᴏᴡᴇʀᴇᴅ by nector",
 
-  // 🤖 GPT/AI API KEYS
-  GPT_API_KEY: "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",
-  GROQ_API_KEY: "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",
-  WEATHER_API_KEY: "ec32bfa1c6b8ff81a636877b6ba302c8",
-  GEMINI_KEY: "AIzaSyCUPaxfIdZawsKZKqCqJcC-GWiQPCXKTDc",
-
-  // 🔧 Auto features (hardcoded defaults)
-  AUTO_STATUS_SEEN: true,      // Auto view statuses ON
-  AUTO_BIO: false,             // Auto bio OFF
-  AUTO_STATUS_REACT: false,    // Auto react OFF
-  AUTO_REPLY_STATUS: false,    // Auto reply OFF
-  AUTO_STICKER: false,         // Auto sticker OFF
-  AUTO_READ: false,            // Auto read OFF
-  AUTO_TYPING: true,           // Auto typing ON
-  AUTO_RECORDING: false,       // Auto recording OFF
-  AUTO_REACT: false,           // Auto react OFF
-  ALWAYS_ONLINE: true,         // Always online ON
-  AUTO_BLOCK: true,            // Auto block ON by default
+  // 🔧 Auto features
+  AUTO_STATUS_SEEN: true,
+  AUTO_BIO: false,
+  AUTO_STATUS_REACT: true,
+  AUTO_REPLY_STATUS: false,
+  AUTO_STICKER: false,
+  AUTO_READ: false,
+  AUTO_TYPING: true,
+  AUTO_RECORDING: false,
+  AUTO_REACT: false,
+  ALWAYS_ONLINE: true,
+  AUTO_BLOCK: true,
 
   // 📦 Extra Features
   ANTI_LEFT: false,
@@ -49,9 +43,19 @@ const config = {
   SUDO_NUMBER: "254725474072",
 
   // 💚 Auto react emoji
-  AUTOLIKE_EMOJI: "💚",
+  AUTOLIKE_EMOJI: "☢️",
   STATUS_READ_MSG: "Status Viewed by THE-HUB-BOT",
   WELCOME: false,
+
+  // 🌍 Calendar Feed (Newly Added Section)
+  OWNER_JID: "254725474072@s.whatsapp.net", // full WhatsApp JID
+  WEATHER_CITY: "Nairobi",
+  WEATHER_API: "https://wttr.in/Nairobi?format=%C+%t", // Simple text weather
+  HOLIDAY_API: "https://date.nager.at/api/v3/PublicHolidays",
+  NEWS_API:
+    "https://newsdata.io/api/1/news?apikey=pub_4218205eea1fdf2b1c21d2bfa83efcccf8a7f&country=ke,us&language=en",
+  QUOTE_API: "https://zenquotes.io/api/random",
+  FACT_API: "https://uselessfacts.jsph.pl/random.json?language=en",
 };
 
 module.exports = config;
