@@ -68,8 +68,8 @@ const uptimeCommand = async (m, Matrix) => {
             name: "cta_url",
             buttonParamsJson: JSON.stringify({
               display_text: "📢 View Channel",
-              url: "https://whatsapp.com/channel/120363395396503029",
-              merchant_url: "https://whatsapp.com/channel/120363395396503029"
+              url: "https://whatsapp.com/channel/0029Vb3zzYJ9xVJk0Y65c81W",
+              merchant_url: "https://whatsapp.com/channel/0029Vb3zzYJ9xVJk0Y65c81W"
             })
           }
         ]
