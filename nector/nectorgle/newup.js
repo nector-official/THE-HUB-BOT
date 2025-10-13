@@ -26,14 +26,14 @@ const uptimeCommand = async (m, Matrix) => {
     const formattedTime = now.toLocaleString('en-KE', options);
     const [date, time] = formattedTime.split(', ');
 
-    // Greeting based on time
+    // Greeting
     const hour = parseInt(now.toLocaleString('en-KE', { timeZone: 'Africa/Nairobi', hour: '2-digit', hour12: false }));
     let greeting = "Hello 👋";
     if (hour < 12) greeting = "🌅 Good morning";
     else if (hour < 18) greeting = "☀️ Good afternoon";
     else greeting = "🌙 Good evening";
 
-    // Uptime calculation
+    // Uptime
     const totalSeconds = process.uptime();
     const days = Math.floor(totalSeconds / (3600 * 24));
     const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
@@ -46,33 +46,31 @@ const uptimeCommand = async (m, Matrix) => {
     const cpuModel = os.cpus()[0].model;
     const platform = os.platform();
 
-    // Caption
     const caption = `*${greeting}, ${m.pushName || "User"}!*\n\n` +
-                    `*🤖 𝐃𝐄𝐗𝐓𝐄𝐑-𝐈𝐐 REPORT*\n\n` +
+                    `*🤖 BOT 𝐃𝐄𝐗𝐓𝐄𝐑-𝐈𝐐 REPORT*\n\n` +
                     `📅 *Date:* ${date}\n` +
                     `🕓 *Time:* ${time}\n` +
                     `🕐 *Uptime:* ${uptime}\n` +
                     `💻 *Platform:* ${platform}\n` +
                     `⚙️ *CPU:* ${cpuModel}\n` +
                     `💾 *RAM Usage:* ${memoryUsage} MB\n\n` +
-                    `_Bot has been running continuously since last restart._`;
+                    `_its active 🚀✊._`;
 
-    // Send image with button to your channel
+    // ✅ Send image with proper channel preview
     await Matrix.sendMessage(
       m.from,
       {
         image: { url: "https://files.catbox.moe/8whhxg.jpg" },
-        caption,
-        buttons: [
-          {
-            name: "cta_url",
-            buttonParamsJson: JSON.stringify({
-              display_text: "📢 View Channel",
-              url: "https://whatsapp.com/channel/0029Vb3zzYJ9xVJk0Y65c81W",
-              merchant_url: "https://whatsapp.com/channel/0029Vb3zzYJ9xVJk0Y65c81W"
-            })
+        caption: caption,
+        contextInfo: {
+          forwardingScore: 999,
+          isForwarded: true,
+          forwardedNewsletterMessageInfo: {
+            newsletterJid: "120363395396503029@newsletter", // your channel ID
+            newsletterName: "THE-HUB-BOT", // channel name displayed
+            serverMessageId: 143
           }
-        ]
+        }
       },
       { quoted: m }
     );
