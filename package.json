@@ -1,6 +1,6 @@
 {
   "name": "THE-HUB-BOT",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "description": "Better than before",
   "main": "index.js",
   "type": "module",
@@ -19,7 +19,7 @@
   "author": "THE-HUB-BOT",
   "license": "ISC",
   "dependencies": {
-    "@whiskeysockets/baileys": "6.7.7",
+    "@whiskeysockets/baileys": "6.7.18",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@google/generative-ai": "^0.9.0",
     "@hapi/boom": "^10.0.1",
@@ -29,7 +29,7 @@
     "api-dylux": "^1.8.3",
     "aptoide-scraper": "^1.0.1",
     "awesome-phonenumber": "^6.8.0",
-    "axios": "^1.6.8",
+    "axios": "^1.7.3",
     "chalk": "^5.3.0",
     "crypto": "^1.0.1",
     "dotenv": "^16.4.5",
