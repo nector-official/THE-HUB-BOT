@@ -11,13 +11,29 @@ const uptimeCommand = async (m, Matrix) => {
   await Matrix.sendMessage(m.from, { react: { text: "⏱️", key: m.key } });
 
   try {
-    // Current date & time in Kenya timezone
+    // Kenya timezone date & time
     const now = new Date();
-    const options = { timeZone: 'Africa/Nairobi', hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit', day: '2-digit', month: 'short', year: 'numeric' };
+    const options = {
+      timeZone: 'Africa/Nairobi',
+      hour12: true,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    };
     const formattedTime = now.toLocaleString('en-KE', options);
     const [date, time] = formattedTime.split(', ');
 
-    // Calculate uptime
+    // Greeting based on time
+    const hour = parseInt(now.toLocaleString('en-KE', { timeZone: 'Africa/Nairobi', hour: '2-digit', hour12: false }));
+    let greeting = "Hello 👋";
+    if (hour < 12) greeting = "🌅 Good morning";
+    else if (hour < 18) greeting = "☀️ Good afternoon";
+    else greeting = "🌙 Good evening";
+
+    // Uptime calculation
     const totalSeconds = process.uptime();
     const days = Math.floor(totalSeconds / (3600 * 24));
     const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
@@ -30,7 +46,9 @@ const uptimeCommand = async (m, Matrix) => {
     const cpuModel = os.cpus()[0].model;
     const platform = os.platform();
 
-    const caption = `*🤖 BOT STATUS REPORT*\n\n` +
+    // Caption
+    const caption = `*${greeting}, ${m.pushName || "User"}!*\n\n` +
+                    `*🤖 𝐃𝐄𝐗𝐓𝐄𝐑-𝐈𝐐 REPORT*\n\n` +
                     `📅 *Date:* ${date}\n` +
                     `🕓 *Time:* ${time}\n` +
                     `🕐 *Uptime:* ${uptime}\n` +
@@ -39,11 +57,22 @@ const uptimeCommand = async (m, Matrix) => {
                     `💾 *RAM Usage:* ${memoryUsage} MB\n\n` +
                     `_Bot has been running continuously since last restart._`;
 
+    // Send image with button to your channel
     await Matrix.sendMessage(
       m.from,
       {
         image: { url: "https://files.catbox.moe/8whhxg.jpg" },
-        caption: caption
+        caption,
+        buttons: [
+          {
+            name: "cta_url",
+            buttonParamsJson: JSON.stringify({
+              display_text: "📢 View Channel",
+              url: "https://whatsapp.com/channel/120363395396503029",
+              merchant_url: "https://whatsapp.com/channel/120363395396503029"
+            })
+          }
+        ]
       },
       { quoted: m }
     );
@@ -55,4 +84,3 @@ const uptimeCommand = async (m, Matrix) => {
 };
 
 export default uptimeCommand;
-  
