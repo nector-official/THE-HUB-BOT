@@ -1,3 +1,5 @@
+// Always‑online fix
+let presenceInterval = null;
 // FULL CLEANED & PATCHED INDEX.JS USING PASTEBIN/BASE64 SESSIONS
 // -------------------------------------------------------------
 // This version removes MEGA session loading and replaces it with
