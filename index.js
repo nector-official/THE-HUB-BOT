@@ -1,3 +1,9 @@
+// FULL CLEANED & PATCHED INDEX.JS USING PASTEBIN/BASE64 SESSIONS
+// -------------------------------------------------------------
+// This version removes MEGA session loading and replaces it with
+// direct Base64 session decoding from SESSION_ID = "nector~<base64>"
+// -------------------------------------------------------------
+
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -18,7 +24,6 @@ import axios from 'axios';
 import config from './config.cjs';
 import autoreact from './lib/autoreact.cjs';
 import { fileURLToPath } from 'url';
-import { File } from 'megajs';
 
 const { emojis, doReact } = autoreact;
 
@@ -35,57 +40,57 @@ if (!fs.existsSync(sessionDir)) fs.mkdirSync(sessionDir, { recursive: true });
 let useQR = false;
 let initialConnection = true;
 
-// Auto feature intervals / guards (so we don't start duplicates on reconnect)
-let presenceInterval = null; // for ALWAYS_ONLINE
-let autobioInterval = null;  // for AUTO_BIO
+// Auto feature intervals\ nlet presenceInterval = null;
+let autobioInterval = null;
 
 // Logger
 const MAIN_LOGGER = pino({
-  timestamp: () => ',"time":"' + new Date().toJSON() + '"'
+  timestamp: () => '\",\"time\":\"' + new Date().toJSON() + '\"'
 });
 const sockLogger = pino({ level: 'silent' });
 
-// The in-memory store (binds to socket events)
 let store = makeInMemoryStore ? makeInMemoryStore({ logger: sockLogger }) : null;
 
-// Helper: download session data from MEGA when SESSION_ID is provided
-async function downloadSessionData() {
+// -------------------------------------------------------------
+// NEW FUNCTION: Load Base64/Pastebin Session (nector~<base64>)
+// -------------------------------------------------------------
+async function loadPastebinSession() {
   try {
-    console.log('Debugging SESSION_ID:', config.SESSION_ID);
     if (!config.SESSION_ID) {
-      console.error('❌ Please add your SESSION_ID to config (SESSION_ID missing).');
+      console.error("❌ SESSION_ID missing in config.");
       return false;
     }
 
-    // Your SESSION_ID format used previously: prefix~<fileId>#<key>
-    const parts = config.SESSION_ID.split('~')[1];
-    if (!parts || !parts.includes('#')) {
-      console.error('❌ Invalid SESSION_ID format! It must contain both file ID and decryption key.');
+    let session = config.SESSION_ID.trim();
+
+    if (!session.startsWith("nector~")) {
+      console.error("❌ Invalid SESSION_ID format. Expected: nector~<base64>");
       return false;
     }
 
-    const [fileId, decryptionKey] = parts.split('#');
+    const base64 = session.replace("nector~", "").trim();
 
-    console.log('🔄 Downloading Session...');
-    const megaFile = File.fromURL('https://mega.nz/file/' + fileId + '#' + decryptionKey);
+    console.log("🔄 Decoding Pastebin/Base64 session...");
+    const buffer = Buffer.from(base64, "base64");
 
-    const buffer = await new Promise((resolve, reject) => {
-      megaFile.download((err, data) => {
-        if (err) return reject(err);
-        resolve(data);
-      });
-    });
+    if (!fs.existsSync(sessionDir)) {
+      fs.mkdirSync(sessionDir, { recursive: true });
+    }
 
     await fs.promises.writeFile(credsPath, buffer);
-    console.log('🔒 Session Successfully Loaded !!');
+
+    console.log("✅ Session successfully loaded from Pastebin/Base64!");
     return true;
+
   } catch (err) {
-    console.error('❌ Failed to download session data:', err);
+    console.error("❌ Failed to load Pastebin/Base64 session:", err);
     return false;
   }
 }
 
-// ------------------ AutoBio helpers (self-contained so index.js doesn't depend on other file paths) ------------------
+// -------------------------------------------------------------
+// AUTO BIO SYSTEM
+// -------------------------------------------------------------
 const AUTO_BIO_QUOTE_POOL = [
   "🚀 Keep pushing forward!",
   "🌟 You're capable of amazing things.",
@@ -98,21 +103,18 @@ const AUTO_BIO_QUOTE_POOL = [
 ];
 
 async function fetchRandomAutoBioQuote() {
-  // try API first, fallback to local pool
   try {
     const res = await axios.get('https://zenquotes.io/api/random', { timeout: 5000 });
     if (res.data && res.data[0]?.q && res.data[0]?.a) {
       return `💬 ${res.data[0].q} — ${res.data[0].a}`;
     }
-  } catch (err) {
-    // swallow — we'll fallback to local quotes
-    // console.error('[AutoBio] ZenQuotes error:', err?.message || err);
-  }
+  } catch {}
+
   return AUTO_BIO_QUOTE_POOL[Math.floor(Math.random() * AUTO_BIO_QUOTE_POOL.length)];
 }
 
 function startAutoBio(Matrix) {
-  if (autobioInterval) return; // already running
+  if (autobioInterval) return;
   console.log('[AutoBio] Starting auto-bio...');
   autobioInterval = setInterval(async () => {
     try {
@@ -133,16 +135,16 @@ function stopAutoBio() {
   }
 }
 
-// ------------------ START SOCKET ------------------
+// -------------------------------------------------------------
+// START SOCKET
+// -------------------------------------------------------------
 async function start() {
   try {
-    // load auth state (creates files under sessionDir)
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
 
     const { version, isLatest } = await fetchLatestBaileysVersion();
     console.log('🤖 THE-HUB-BOT using WA v' + version.join('.') + ' | Latest:', isLatest);
 
-    // create socket
     const sock = makeWASocket({
       version,
       logger: sockLogger,
@@ -158,171 +160,136 @@ async function start() {
       }
     });
 
-    // bind store to socket events so it caches messages
     if (store && typeof store.bind === 'function') store.bind(sock.ev);
 
-    // save creds when updated
     sock.ev.on('creds.update', saveCreds);
 
-    // connection update (open/close)
+    // -------------------------------------------------------------
+    // CONNECTION UPDATE
+    // -------------------------------------------------------------
     sock.ev.on('connection.update', async update => {
       const { connection, lastDisconnect } = update;
+
       if (connection === 'close') {
-        // clear auto intervals/listeners to avoid duplicate behavior on reconnect
         if (presenceInterval) {
           clearInterval(presenceInterval);
           presenceInterval = null;
         }
         stopAutoBio();
 
-        // reconnect unless logged out
-        const shouldReconnect =
-          lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+        const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+
         if (shouldReconnect) {
           console.log('♻️ Connection closed, trying restart...');
           start();
         } else {
           console.log('❌ Logged out. Please remove session and re-scan QR.');
         }
+
       } else if (connection === 'open') {
         if (initialConnection) {
           console.log('✅ THE-HUB-BOT is now online!');
 
-          // simple startup message (cleaned)
           try {
             await sock.sendMessage(sock.user.id, {
               text: '✅ Connection successful! Enjoy THE-HUB-BOT 🎉'
             });
-            console.log('✅ Startup message sent.');
-          } catch (e) {
-            console.error('❌ Failed to send startup message:', e?.message ?? e);
-          }
+          } catch {}
 
-          // ---------- Auto features triggered on startup (respecting config flags) ----------
-          // ALWAYS_ONLINE -> send periodic 'available' presence
           if (config.ALWAYS_ONLINE && !presenceInterval) {
             presenceInterval = setInterval(async () => {
-              try {
-                await sock.sendPresenceUpdate('available');
-              } catch (err) {
-                // ignore transient errors
-              }
+              try { await sock.sendPresenceUpdate('available'); } catch {}
             }, 10_000);
-            console.log('[Auto] ALWAYS_ONLINE enabled (presence heartbeat every 10s)');
+            console.log('[Auto] ALWAYS_ONLINE enabled');
           }
 
-          // AUTO_BIO -> start auto-bio loop
-          if (config.AUTO_BIO) {
-            startAutoBio(sock);
-          }
+          if (config.AUTO_BIO) startAutoBio(sock);
 
           initialConnection = false;
-        } else {
-          console.log('♻️ Connection re-established after restart.');
 
-          // Ensure auto features on reconnect
+        } else {
+          console.log('♻️ Reconnected.');
+
           if (config.ALWAYS_ONLINE && !presenceInterval) {
             presenceInterval = setInterval(async () => {
-              try {
-                await sock.sendPresenceUpdate('available');
-              } catch (err) {}
+              try { await sock.sendPresenceUpdate('available'); } catch {}
             }, 10_000);
           }
+
           if (config.AUTO_BIO && !autobioInterval) startAutoBio(sock);
         }
       }
     });
 
-    // wire events: messages, calls, group updates
+    // -------------------------------------------------------------
+    // EVENTS
+    // -------------------------------------------------------------
     sock.ev.on('messages.upsert', async m => {
       try {
-        // first, let your custom Handler process it (commands, responses etc)
         Handler(m, sock, MAIN_LOGGER);
 
-        // then run auto features per incoming message (if applicable)
         const msg = m.messages?.[0];
 
         if (msg && !msg.key?.fromMe) {
-          // Auto-typing / Auto-recording presence
           try {
-            if (config.AUTO_RECORDING) {
-              // give priority to recording if both enabled
-              await sock.sendPresenceUpdate('recording', msg.key.remoteJid);
-            } else if (config.AUTO_TYPING) {
-              await sock.sendPresenceUpdate('composing', msg.key.remoteJid);
-            }
-          } catch (err) {
-            // ignore presence errors
-          }
+            if (config.AUTO_RECORDING) await sock.sendPresenceUpdate('recording', msg.key.remoteJid);
+            else if (config.AUTO_TYPING) await sock.sendPresenceUpdate('composing', msg.key.remoteJid);
+          } catch {}
 
-          // Auto status view (when a status/broadcast update arrives)
           try {
             if (config.AUTO_STATUS_SEEN && msg.key.remoteJid === 'status@broadcast') {
-              // readMessages may or may not be available depending on Baileys version
-              if (typeof sock.readMessages === 'function') {
-                await sock.readMessages([msg.key]);
-              } else if (typeof sock.readMessage === 'function') {
-                await sock.readMessage(msg.key);
-              } else {
-                // best-effort: do nothing if function missing
-              }
+              if (typeof sock.readMessages === 'function') await sock.readMessages([msg.key]);
             }
-          } catch (err) {
-            // ignore
-          }
+          } catch {}
         }
 
-        // then (like original) run autoreact if enabled and message is not from me
-        if (
-          msg &&
-          !msg.key?.fromMe &&
-          config.AUTO_REACT &&
-          msg.message
-        ) {
+        if (msg && !msg.key?.fromMe && config.AUTO_REACT && msg.message) {
           const emoji = emojis[Math.floor(Math.random() * emojis.length)];
           await doReact(emoji, msg, sock);
         }
+
       } catch (err) {
         console.error('Auto react / message handler error:', err);
       }
     });
 
-    // call events -> custom Callupdate
     sock.ev.on('call', callData => Callupdate(callData, sock));
+    sock.ev.on('group-participants.update', data => GroupUpdate(sock, data));
 
-    // group participant updates -> custom GroupUpdate
-    sock.ev.on('group-participants.update', participantsUpdate => GroupUpdate(sock, participantsUpdate));
-
-    // set public/private mode as per config (keeps parity with your obf code)
-    if (config.MODE === 'private') sock.public = false;
-    else if (config.MODE === 'public') sock.public = true;
+    sock.public = config.MODE === 'public';
 
     console.log('✅ socket started.');
+
   } catch (err) {
     console.error('Critical Error:', err);
     process.exit(1);
   }
 }
 
+// -------------------------------------------------------------
+// INIT
+// -------------------------------------------------------------
 async function init() {
-  // If a local creds.json exists we use it; otherwise try to download via SESSION_ID
   if (fs.existsSync(credsPath)) {
-    console.log('🔒 Session file found, proceeding without QR.');
+    console.log('🔒 Local session found → starting bot');
     await start();
   } else {
-    const ok = await downloadSessionData();
+    const ok = await loadPastebinSession();
+
     if (ok) {
-      console.log('✅ Session downloaded, starting bot.');
+      console.log('✅ Session loaded → starting bot');
       await start();
     } else {
-      console.log('❌ No session found or invalid, will print QR for manual login.');
+      console.log('❌ SESSION_ID invalid → QR mode enabled');
       useQR = true;
       await start();
     }
   }
 }
 
-/* Express server (keeps app alive on Render) */
+// -------------------------------------------------------------
+// EXPRESS SERVER (Keeps bot alive)
+// -------------------------------------------------------------
 const app = express();
 const PORT = process.env.PORT || 10000;
 app.use(express.static(path.join(__dirname)));
