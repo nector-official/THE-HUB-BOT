@@ -1,5 +1,3 @@
-// Always‑online fix
-let presenceInterval = null;
 // FULL CLEANED & PATCHED INDEX.JS USING PASTEBIN/BASE64 SESSIONS
 // -------------------------------------------------------------
 // This version removes MEGA session loading and replaces it with
@@ -42,12 +40,13 @@ if (!fs.existsSync(sessionDir)) fs.mkdirSync(sessionDir, { recursive: true });
 let useQR = false;
 let initialConnection = true;
 
-// Auto feature intervals\ nlet presenceInterval = null;
-let autobioInterval = null;
+// Auto feature intervals / guards (so we don't start duplicates on reconnect)
+let presenceInterval = null; // for ALWAYS_ONLINE
+let autobioInterval = null;  // for AUTO_BIO
 
 // Logger
 const MAIN_LOGGER = pino({
-  timestamp: () => '\",\"time\":\"' + new Date().toJSON() + '\"'
+  timestamp: () => ',"time":"' + new Date().toJSON() + '"'
 });
 const sockLogger = pino({ level: 'silent' });
 
@@ -111,7 +110,6 @@ async function fetchRandomAutoBioQuote() {
       return `💬 ${res.data[0].q} — ${res.data[0].a}`;
     }
   } catch {}
-
   return AUTO_BIO_QUOTE_POOL[Math.floor(Math.random() * AUTO_BIO_QUOTE_POOL.length)];
 }
 
